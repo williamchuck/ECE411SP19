@@ -70,4 +70,4 @@ physical_memory memory(
     .rdata(pmem_rdata)
 );
 
-endmodule : mp2_tb
+endmodule : urchin_tb

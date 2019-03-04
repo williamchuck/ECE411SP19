@@ -62,12 +62,13 @@ typedef struct packed {
     rv32i_opcode opcode;
     alu_ops aluop;
     branch_funct3_t cmpop;
-    logic load_regfile;
     logic dmem_read;
     logic dmem_write;
-    logic wbmux_sel;
     logic cmpmux_sel;
-    logic alumux1_sel;
+    logic dmem_address_sel;
+    logic [1:0] pcmux_sel;
+    logic [1:0] alumux1_sel;
+    logic [2:0] wbmux_sel;
     logic [2:0] alumux2_sel;
 } rv32i_control_word;
 

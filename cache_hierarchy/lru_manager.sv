@@ -23,7 +23,7 @@ generate begin: LRU_parsing_layers
             .upstream(branches[i][2**i-1:0]),
             .downstream(branches[i+1][2**(i+1)-1:0])
         );
-        lru_manager_reverse_layer #(i)
+        lru_manager_reverse_layer #(i) reverse_layer
         (
             .lru(lru[2**i-1 +: 2**i]),
             .reverse_downstream(reverse_branches[i+1][2**(i+1)-1:0]),
