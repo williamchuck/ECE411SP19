@@ -18,7 +18,8 @@ module cpu_datapath (
 
 /// MARK: - Components in IF stage
 
-logic [31:0] pc, pc_out_plus4, pcmux_out, pc_back;
+logic load_pc, pcmux_sel;
+logic [31:0] pc, pc_out_plus4, pcmux_out, pc_ID, pc_EX, pc_back;
 assign pc_out_plus4 = pc + 32'h00000004;
 assign imem_address = pc;
 pc_register PC
@@ -38,6 +39,7 @@ mux2 pcmux
 
 /// MARK: - Components in ID stage
 
+logic load_regfile;
 logic [4:0] rs1, rs2, rd;
 rv32i_word rs1_out, rs2_out, reg_back;
 rv32i_opcode opcode;
@@ -50,7 +52,7 @@ regfile regfile
 );
 
 // TODO: These two modules don't exist yet.
-control_rom rom( .* );
+control_rom control ( .* );
 hdu hdu ( .* );
 
 /// MARK: - Components in EX stage
@@ -60,18 +62,18 @@ mux2 alumux1
 (
     .sel(alumux1_sel),
     .a(rs1_out_EX),
-    .b(ctw.pc),
+    .b(pc_EX),
     .f(alumux1_out)
 );
 
 mux8 alumux2
 (
     .sel(alumux2_sel),
-    .a0(ctw_EX.i_imm),
-    .a1(ctw_EX.u_imm),
-    .a2(ctw_EX.b_imm),
-    .a3(ctw_EX.s_imm),
-    .a4(ctw_EX.j_imm),
+    .a0(ir_EX.i_imm),
+    .a1(ir_EX.u_imm),
+    .a2(ir_EX.b_imm),
+    .a3(ir_EX.s_imm),
+    .a4(ir_EX.j_imm),
     .a5(rs2_out_EX),
     .a6(32'h00000000),
     .a7(32'h00000000),
@@ -90,7 +92,7 @@ mux2 cmpmux
 (
     .sel(ctw_EX.cmpmux_sel),
     .a(rs2_out_EX),
-    .b(ctw_EX.i_imm),
+    .b(ir_EX.i_imm),
     .f(cmpmux_out)
 );
 
@@ -168,6 +170,14 @@ register ID_EX_ctw
     .load(no_mem),
     .in(ctw),
     .out(ctw_EX)
+);
+
+register ID_EX_pc
+(
+    .*,
+    .load(no_mem),
+    .in(pc_ID),
+    .out(pc_EX)
 );
 
 register ID_EX_rs1_out
