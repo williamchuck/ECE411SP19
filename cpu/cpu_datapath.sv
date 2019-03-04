@@ -20,17 +20,17 @@ module cpu_datapath (
 
 logic load_pc, pcmux_sel, cmpmux_out, br_en;
 logic [2:0] alumux2_sel;
-logic [31:0] pc, pc_out_plus4, pcmux_out, pc_ID, pc_EX, pc_back, alumux2_out, alu_out, alu_out_WB, alu_out_MEM;
+logic [31:0] pc_out, pc_out_plus4, pcmux_out, pc_ID, pc_EX, pc_back, alumux2_out, alu_out, alu_out_WB, alu_out_MEM;
 logic [31:0] rs2_out_MEM, rs1_out_EX, rs2_out_EX, dmem_rdata_WB, ir_out, ir_out_EX;
 rv32i_control_word ctw, ctw_EX, ctw_MEM, ctw_WB;
-assign pc_out_plus4 = pc + 32'h00000004;
-assign imem_address = pc;
+assign pc_out_plus4 = pc_out + 32'h00000004;
+assign imem_address = pc_out;
 pc_register PC
 (
     .*,
     .load(load_pc),
     .in(pcmux_out),
-    .out(pc)
+    .out(pc_out)
 );
 
 assign pcmux_out = pcmux_sel ? pc_back : pc_out_plus4;
@@ -172,7 +172,7 @@ register IF_ID_pc
 (
     .*,
     .load(no_mem & no_hazard),
-    .in(pc),
+    .in(pc_out),
     .out(pc_ID)
 );
 

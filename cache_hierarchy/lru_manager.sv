@@ -11,11 +11,12 @@ module lru_manager #(
 
 logic [num_ways-1:0] branches [s_way+1];
 logic [num_ways-1:0] reverse_branches [s_way+1];
+assign way = (hits == {num_ways{1'b0}}) ? branches[s_way] : hits;
 assign branches[0] = {num_ways{1'b1}};
-assign reverse_branches[s_way] = 
+assign reverse_branches[s_way] = way;
 genvar i;
 generate begin: LRU_parsing_layers
-    for (i = 0; i < s_way; i++) begin
+    for (i = 0; i < s_way; i++) begin: lru_layers
         lru_manager_layer #(i) layer
         (
             .lru(lru[2**i-1 +: 2**i]),
@@ -31,6 +32,7 @@ generate begin: LRU_parsing_layers
         );
     end
 end
+endgenerate
     
 endmodule
 
@@ -45,11 +47,12 @@ module lru_manager_layer #(
 
 genvar i;
 generate begin: layer_logic
-    for (i = 0; i < 2**level; i++) begin
+    for (i = 0; i < 2**level; i++) begin: layer_logic
         assign downstream[2*i] = upstream[i] & ~lru[i];
         assign downstream[2*i+1] = upstream[i] & lru[i];
     end
 end
+endgenerate
 
 endmodule
 
@@ -65,7 +68,7 @@ module lru_manager_reverse_layer #(
 
 genvar i;
 generate begin: reverse_layer_logic
-    for (i = 0; i < 2**level; i++) begin
+    for (i = 0; i < 2**level; i++) begin: reverse_layer_logic
         assign new_lru[i] =
             (reverse_downstream[2*i] | reverse_downstream[2*i+1]) ?
                 reverse_downstream[2*i] : lru[i];
@@ -73,5 +76,6 @@ generate begin: reverse_layer_logic
             reverse_downstream[2*i] | reverse_downstream[2*i+1];
     end
 end
+endgenerate
 
 endmodule

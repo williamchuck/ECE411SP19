@@ -38,7 +38,7 @@
 
 set_global_assignment -name FAMILY "Stratix III"
 set_global_assignment -name DEVICE AUTO
-set_global_assignment -name TOP_LEVEL_ENTITY cache_hierarchy
+set_global_assignment -name TOP_LEVEL_ENTITY urchin
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 13.1
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "20:34:49  MARCH 03, 2019"
 set_global_assignment -name LAST_QUARTUS_VERSION 13.1
@@ -63,6 +63,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/lru_manager.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_datapath_core.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_core.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_control.sv
+set_global_assignment -name SYSTEMVERILOG_FILE urchin.sv
 set_global_assignment -name SYSTEMVERILOG_FILE register.sv
 set_global_assignment -name SYSTEMVERILOG_FILE mux.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cpu.sv
