@@ -3,7 +3,7 @@ module cache_hierarchy #(
     parameter s_index  = 3,
     parameter s_tag    = 32 - s_offset - s_index,
     parameter s_mask   = 2**s_offset,
-    parameter s_line   = 8*s_mask,
+    parameter s_line   = 8*s_mask
 )
 (
     input clk,
@@ -28,10 +28,14 @@ module cache_hierarchy #(
 );
 
 logic [s_offset-1:0] imem_offset, dmem_offset;
-assign imem_offset = imem_address[s_offset-1:0];
-assign dmem_offset = dmem_address[s_offset-1:0];
+assign imem_offset = {imem_address[s_offset-1:2], 2'd0};
+assign dmem_offset = {dmem_address[s_offset-1:2], 2'd0};
 
-cache_core #(.s_offset(s_offset), .s_index(s_index), .num_ways(4)) icache_core
+logic l2_icache_resp, l2_icache_read, l2_icache_write, l2_dcache_resp, l2_dcache_read, l2_dcache_write, l2_read, l2_write, l2_resp;
+logic[31:0] l2_icache_address, l2_dcache_address, l2_address;
+logic [255:0] icache_rdata, l2_icache_rdata, l2_icache_wdata, l2_dcache_wdata, dcache_wdata, dcache_rdata, l2_dcache_rdata_transformed, l2_wdata, l2_rdata, l2_dcache_rdata;
+
+cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
 (
     .*,
     .upstream_read(1'b1),
@@ -48,7 +52,7 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .num_ways(4)) icache_core
     .downstream_address(l2_icache_address)
 );
 
-cache_core #(.s_offset(s_offset), .s_index(s_index), .num_ways(4)) dcache_core
+cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache_core
 (
     .*,
     .upstream_read(dmem_read),
@@ -65,7 +69,7 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .num_ways(4)) dcache_core
     .downstream_address(l2_dcache_address)
 );
 
-cache_core #(.s_offset(s_offset), .s_index(s_index), .num_ways(8)) l2_cache_core
+cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(3)) l2_cache_core
 (
     .*,
     .upstream_read(l2_read),
@@ -92,7 +96,7 @@ input_transformer dcache_downstream_rdata_transformer
     .line_data(l2_dcache_rdata),
     .word_data(dmem_wdata),
     .enable(dmem_write),
-    .offset(offset),
+    .offset(dmem_offset),
     .wmask(dmem_byte_enable),
     .dataout(l2_dcache_rdata_transformed)
 );
@@ -102,7 +106,7 @@ input_transformer dcache_upstream_wdata_transformer
     .line_data(dcache_rdata),
     .word_data(dmem_wdata),
     .enable(dmem_write),
-    .offset(offset),
+    .offset(dmem_offset),
     .wmask(dmem_byte_enable),
     .dataout(dcache_wdata)
 );

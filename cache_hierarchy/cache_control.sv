@@ -25,6 +25,7 @@ module cache_control (
     output logic downstream_write
 );
 
+logic wb_required;
 assign wb_required = ~hit & dirty;
 
 enum int unsigned { 

@@ -5,7 +5,7 @@ module cache_core #(
     parameter s_mask   = 2**s_offset,
     parameter s_line   = 8*s_mask,
     parameter num_sets = 2**s_index,
-    parameter num_ways = 4
+    parameter s_way    = 2
 )
 (
     input clk,
@@ -29,7 +29,7 @@ logic hit, valid, dirty, cache_read, cache_load_en;
 logic downstream_address_sel, ld_wb, ld_LRU, new_dirty;
 
 cache_datapath_core #(
-    .s_offset(s_offset), .s_index(s_index), .num_ways(num_ways)) datapath
+    .s_offset(s_offset), .s_index(s_index), .s_way(s_way)) datapath
 (
     .*
 );

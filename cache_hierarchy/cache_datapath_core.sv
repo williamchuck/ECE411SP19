@@ -5,7 +5,8 @@ module cache_datapath_core #(
     parameter s_mask   = 2**s_offset,
     parameter s_line   = 8*s_mask,
     parameter num_sets = 2**s_index,
-    parameter num_ways = 4
+    parameter s_way    = 2,
+    parameter num_ways = 2**s_way
 )
 (
     input clk,
@@ -13,7 +14,6 @@ module cache_datapath_core #(
     // Datapath-Control interface
     input logic cache_read,
     input logic cache_load_en,
-    input logic inmux_sel,
     input logic downstream_address_sel,
     input logic ld_wb,
     input logic ld_LRU,
@@ -36,29 +36,21 @@ module cache_datapath_core #(
 // Address parsing
 logic [s_tag-1:0] tag;
 logic [s_index-1:0] index;
-logic [s_offset-1:0] offset;
 
 logic [num_ways-1:0] way;
 logic [num_ways-2:0] lru, new_lru;
 logic [num_ways-1:0] equals, dirtys, valids, hits;
 logic [s_tag-1:0] tags [num_ways];
 logic [s_tag-1:0] tagmux_out;
-logic [s_line-1:0] data1, data0, hitmux_out, wbmux_out, inmux_out,
-                   hit_data, miss_data;
+logic [s_line-1:0] hitmux_out, wbmux_out, inmux_out, hit_data, miss_data;
+logic [s_line-1:0] datas [num_ways];
 
 assign tag = upstream_address[31:s_offset+s_index];
 assign index = upstream_address[s_offset+s_index-1:s_offset];
-assign offset = upstream_address[s_offset-1:0];
 
-mux2 #(32) downstream_address_mux
-(
-    .sel(downstream_address_sel),
-    .a(upstream_address),
-    .b({tagmux_out, index, {s_offset{1'b0}}}),
-    .f(downstream_address)
-);
+assign downstream_address = downstream_address_sel ? {tagmux_out, index, {s_offset{1'b0}}} : upstream_address;
 
-onehot_mux #(num_ways, s_tag) tagmux
+onehot_mux #(s_way, s_tag) tagmux
 (
     .sel(way),
     .datain(tags),
@@ -67,80 +59,84 @@ onehot_mux #(num_ways, s_tag) tagmux
 
 // MARK: - Storage units
 
-lru_manager #(num_ways) LRUM
+lru_manager #(s_way) LRUM
 (
     .*
 );
 
 array #(.s_index(s_index), .width(num_ways-1)) lru_store
 (
-    .*,
+    .clk,
+    .index,
     .read(cache_read),
     .load(ld_LRU),
     .datain(new_lru),
     .dataout(lru)
 );
 
-for (int i = 0; i < num_ways; i++) begin
+genvar i;
+
+generate begin: arrays
+
+for (i = 0; i < num_ways; i++) begin : forloop
     array valid_array_i
     (
-        .*,
+        .clk,
+        .index,
         .read(cache_read),
         .load(cache_load_en & way[i]),
         .datain(1'b1),
         .dataout(valids[i])
     );
-end
-
-for (int i = 0; i < num_ways; i++) begin
+    
     array dirty_array_i
     (
-        .*,
+        .clk,
+        .index,
         .read(cache_read),
         .load(cache_load_en & way[i]),
         .datain(new_dirty),
         .dataout(dirtys[i])
     );
-end
-
-for (int i = 0; i < num_ways; i++) begin
+    
     array #(.s_index(s_index), .width(s_tag)) tag_array_i
     (
-        .*,
+        .clk,
+        .index,
         .read(cache_read),
         .load(cache_load_en & way[i]),
         .datain(tag),
         .dataout(tags[i])
     );
-end
-
-for (int i = 0; i < num_ways; i++) begin
+    
     data_array line_i
     (
-        .*,
+        .clk,
+        .index,
         .read(1'b1),
         .write_en({s_mask{cache_load_en & way[i]}}),
-        .datain(upstream_wdata),
+        .datain(inmux_out),
         .dataout(datas[i])
     );
+    
+    assign equals[i] = tags[i] == tag;
+    assign hits[i] = equals[i] & valids[i];
 end
 
 // MARK: - Hit/Miss check
-
-for (int i = 0; i < num_ways; i++) begin
-    equals[i] = tags[i] == tag;
-    hits = equals & valids;
-    hit = hits != {num_ways{1'b0}};
 end
+endgenerate
 
-onehot_mux #(num_ways, 1) validmux
+assign hit = hits != {num_ways{1'b0}};
+
+onehot_mux_1b #(s_way) validmux
 (
     .sel(way),
     .datain(valids),
     .dataout(valid)
 );
 
-onehot_mux #(num_ways, 1) dirtymux
+onehot_mux_1b #(s_way) dirtymux
 (
     .sel(way),
     .datain(dirtys),
@@ -149,24 +145,18 @@ onehot_mux #(num_ways, 1) dirtymux
 
 // MARK: - Data input
 
-mux2 #(s_line) inmux
-(
-    .sel(hit),
-    .a(downstream_rdata),
-    .b(upstream_wdata),
-    .f(inmux_out)
-);
+assign inmux_out = hit ? upstream_wdata : downstream_rdata;
 
 // MARK: - Data output
 
-onehot_mux #(num_ways, s_line) hitmux
+onehot_mux #(s_way, s_line) hitmux
 (
     .sel(way),
     .datain(datas),
     .dataout(upstream_rdata)
 );
 
-onehot_mux #(num_ways, s_line) wbmux
+onehot_mux #(s_way, s_line) wbmux
 (
     .sel(way),
     .datain(datas),
@@ -175,7 +165,7 @@ onehot_mux #(num_ways, s_line) wbmux
 
 register #(s_line) wb_reg
 (
-    .*,
+    .clk,
     .load(ld_wb),
     .in(wbmux_out),
     .out(downstream_wdata)
