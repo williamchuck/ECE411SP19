@@ -36,14 +36,3 @@ always_comb begin
     end
 end
 endmodule
-
-module mux2 (
-    input logic sel,
-    input logic a,
-    input logic b,
-    output logic f
-);
-
-assign f = sel ? b : a;
-
-endmodule

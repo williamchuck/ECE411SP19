@@ -31,14 +31,30 @@ logic [s_offset-1:0] imem_offset, dmem_offset;
 assign imem_offset = {imem_address[s_offset-1:2], 2'd0};
 assign dmem_offset = {dmem_address[s_offset-1:2], 2'd0};
 
-logic l2_icache_resp, l2_icache_read, l2_icache_write, l2_dcache_resp, l2_dcache_read, l2_dcache_write, l2_read, l2_write, l2_resp;
+logic l2_icache_resp, l2_icache_read, l2_icache_write, l2_dcache_resp;
+logic l2_dcache_read, l2_dcache_write, l2_read, l2_write, l2_resp;
+logic icache_hit, dcache_hit, l2_hit;
 logic[31:0] l2_icache_address, l2_dcache_address, l2_address;
-logic [255:0] icache_rdata, l2_icache_rdata, l2_icache_wdata, l2_dcache_wdata, dcache_wdata, dcache_rdata, l2_dcache_rdata_transformed, l2_wdata, l2_rdata, l2_dcache_rdata;
+logic [255:0] icache_rdata, l2_icache_rdata, l2_icache_wdata;
+logic [255:0] l2_dcache_wdata, dcache_wdata, dcache_rdata;
+logic [255:0] l2_dcache_rdata_transformed, l2_wdata, l2_rdata, l2_dcache_rdata;
+// logic [255:0] imem_buffered_rdatamux_out, dmem_buffered_rdatamux_out;
+logic [255:0] dmem_rdatamux_out, imem_rdatamux_out;
+logic [255:0] pmem_rdata_reg_out;
+
+register #(256) pmem_rdata_reg
+(
+    .clk,
+    .load(pmem_resp),
+    .in(pmem_rdata),
+    .out(pmem_rdata_reg_out)
+);
 
 cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
 (
-    .*,
-    .upstream_read(1'b1),
+    .clk,
+    .hit(icache_hit),
+    .upstream_read(1'b0),
     .upstream_write(1'b0),
     .upstream_address(imem_address),
     .upstream_wdata({s_line{1'b0}}),
@@ -54,7 +70,8 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
 
 cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache_core
 (
-    .*,
+    .clk,
+    .hit(dcache_hit),
     .upstream_read(dmem_read),
     .upstream_write(dmem_write),
     .upstream_address(dmem_address),
@@ -71,7 +88,8 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache_core
 
 cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(3)) l2_cache_core
 (
-    .*,
+    .clk,
+    .hit(l2_hit),
     .upstream_read(l2_read),
     .upstream_write(l2_write),
     .upstream_address(l2_address),
@@ -93,7 +111,7 @@ cache_arbiter arbiter
 
 input_transformer dcache_downstream_rdata_transformer
 (
-    .line_data(l2_dcache_rdata),
+    .line_data(dmem_rdatamux_out),
     .word_data(dmem_wdata),
     .enable(dmem_write),
     .offset(dmem_offset),
@@ -111,16 +129,46 @@ input_transformer dcache_upstream_wdata_transformer
     .dataout(dcache_wdata)
 );
 
+// always_comb begin : dmem_buffered_rdata_selection
+//     if (dcache_hit) begin
+//         dmem_buffered_rdatamux_out = dcache_rdata;
+//     end else if (l2_hit & l2_read) begin
+//         dmem_buffered_rdatamux_out = l2_rdata;
+//     end else begin
+//         dmem_buffered_rdatamux_out = pmem_rdata_reg_out;
+//     end
+// end
+
+// always_comb begin : imem_buffered_rdata_selection
+//     if (icache_hit) begin
+//         imem_buffered_rdatamux_out = icache_rdata;
+//     end else if (l2_hit & l2_read) begin
+//         imem_buffered_rdatamux_out = l2_rdata;
+//     end else begin
+//         imem_buffered_rdatamux_out = pmem_rdata_reg_out;
+//     end
+// end
+
+always_comb begin : dmem_rdata_selection
+    if (dcache_hit) begin
+        dmem_rdatamux_out = dcache_rdata;
+    end else if (l2_hit & l2_read) begin
+        dmem_rdatamux_out = l2_rdata;
+    end else begin
+        dmem_rdatamux_out = pmem_rdata;
+    end
+end
+
 output_transformer icache_output_transformer
 (
-    .line_data(icache_rdata),
+    .line_data(imem_rdatamux_out),
     .offset(imem_offset),
     .dataout(imem_rdata)
 );
 
 output_transformer dcache_output_transformer
 (
-    .line_data(dcache_rdata),
+    .line_data(dmem_rdatamux_out),
     .offset(dmem_offset),
     .dataout(dmem_rdata)
 );

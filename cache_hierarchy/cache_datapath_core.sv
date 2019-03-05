@@ -113,7 +113,6 @@ for (i = 0; i < num_ways; i++) begin : forloop
     (
         .clk,
         .index,
-        .read(1'b1),
         .write_en({s_mask{cache_load_en & way[i]}}),
         .datain(inmux_out),
         .dataout(datas[i])

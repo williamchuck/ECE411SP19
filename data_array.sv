@@ -7,7 +7,6 @@ module data_array #(
 )
 (
     input clk,
-	 input read,
     input [s_mask-1:0] write_en,
     input [s_index-1:0] index,
     input [s_line-1:0] datain,
@@ -15,8 +14,7 @@ module data_array #(
 );
 
 logic [s_line-1:0] data [num_sets-1:0] /* synthesis ramstyle = "logic" */;
-logic [s_line-1:0] _dataout;
-assign dataout = _dataout;
+assign dataout = data[index];
 
 /* Initialize array */
 initial
@@ -29,9 +27,6 @@ end
 
 always_ff @(posedge clk)
 begin
-	 if (read)
-		  _dataout <= data[index];
-
     for (int i = 0; i < s_mask; i++)
     begin
 		data[index][8*i +: 8] <= write_en[i] ? datain[8*i +: 8] : data[index][8*i +: 8];

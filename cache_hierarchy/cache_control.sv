@@ -29,7 +29,7 @@ logic wb_required;
 assign wb_required = ~hit & dirty;
 
 enum int unsigned { 
-    IDLE, ACTION, PACTION, WRITEBACK
+    IDLE, ACTION, WRITEBACK
 } state, next_state;
 
 always_comb begin : state_based_action
@@ -51,19 +51,18 @@ always_comb begin : state_based_action
             downstream_read = ~(hit | downstream_resp);
             new_dirty = upstream_write;
             if (hit | downstream_resp) begin
-                upstream_resp = hit;
+                // upstream_resp = ~wb_required;
+                upstream_resp = 1'b1;
                 cache_load_en = (~hit | upstream_write);
                 ld_wb = 1;
                 ld_LRU = 1;
             end
         end
 
-        PACTION: ;
-
         WRITEBACK: begin
-            upstream_resp = ~wb_required | (wb_required & downstream_resp);
+            // upstream_resp = downstream_resp;
             downstream_address_sel = 1;
-            downstream_write = wb_required & ~downstream_resp;
+            downstream_write = ~downstream_resp;
         end
         
         default: ;
@@ -74,9 +73,8 @@ always_comb begin : state_transition_logic
     next_state = state;
     case(state)
         IDLE: next_state = (upstream_read | upstream_write) ? ACTION : IDLE;
-        ACTION: next_state = hit ? IDLE : (downstream_resp ? PACTION : ACTION);
-        PACTION: next_state = WRITEBACK;
-        WRITEBACK: next_state = upstream_resp ? IDLE : WRITEBACK;
+        ACTION: next_state = hit ? IDLE : (downstream_resp ? (wb_required ? WRITEBACK : IDLE) : ACTION);
+        WRITEBACK: next_state = downstream_resp ? IDLE : WRITEBACK;
         default: ;
     endcase
 end

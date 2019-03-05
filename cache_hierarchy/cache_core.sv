@@ -9,6 +9,7 @@ module cache_core #(
 )
 (
     input clk,
+    output hit,
 
     input upstream_read,
     input upstream_write,
@@ -25,7 +26,7 @@ module cache_core #(
     output logic downstream_write
 );
 
-logic hit, valid, dirty, cache_read, cache_load_en;
+logic valid, dirty, cache_read, cache_load_en;
 logic downstream_address_sel, ld_wb, ld_LRU, new_dirty;
 
 cache_datapath_core #(
