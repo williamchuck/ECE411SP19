@@ -33,7 +33,7 @@ logic icache_sel, dcache_sel;
 assign icache_sel = l2_icache_read | l2_icache_write;
 assign dcache_sel = l2_dcache_read | l2_dcache_write;
 
-logic muxsel;
+logic muxsel, new_muxsel;
 
 enum int unsigned {
     INSN, DATA
@@ -48,42 +48,45 @@ assign l2_dcache_rdata = muxsel ? l2_rdata : {s_line{1'bX}};
 assign l2_icache_resp = muxsel ? 1'b0 : l2_resp;
 assign l2_dcache_resp = muxsel ? l2_resp : 1'b0;
 
-assign muxsel = 1'b1;
+// assign muxsel = 1'b1;
 
-// always_comb begin : state_action
-//     case({dcache_sel, icache_sel})
-//         2'b00: muxsel = 0;
-//         2'b01: muxsel = 0;
-//         2'b10: muxsel = 1;
-//         2'b11: begin
-//             case(state)
-//                 INSN: muxsel = 0;
-//                 DATA: muxsel = 1;
-//             endcase
-//         end
-//         default: ;
-//     endcase
-// end
+always_comb begin : state_action
+    case({dcache_sel, icache_sel})
+        2'b00: new_muxsel = muxsel;
+        2'b01: new_muxsel = 0;
+        2'b10: new_muxsel = 1;
+        2'b11: begin
+            case(state)
+                INSN: new_muxsel = 0;
+                DATA: new_muxsel = 1;
+            endcase
+        end
+        default: ;
+    endcase
+end
 
-// always_comb begin : next_state_logic
-//     next_state = state;
-//     if (l2_resp) begin
-//         case({dcache_sel, icache_sel})
-//             2'b00: next_state = state;
-//             2'b01: next_state = DATA;
-//             2'b10: next_state = INSN;
-//             2'b11: begin
-//                 case(state)
-//                     INSN: next_state = DATA;
-//                     DATA: next_state = INSN;
-//                 endcase
-//             end
-//         endcase
-//     end
-// end
+always_comb begin : next_state_logic
+    next_state = state;
+    if (l2_resp) begin
+        case({dcache_sel, icache_sel})
+            2'b00: next_state = state;
+            2'b01: next_state = DATA;
+            2'b10: next_state = INSN;
+            2'b11: begin
+              if(l2_resp) begin
+                case(state)
+                    INSN: next_state = DATA;
+                    DATA: next_state = INSN;
+                endcase
+              end
+            end
+        endcase
+    end
+end
 
-// always_ff @( posedge clk ) begin : state_update
-//     state <= next_state;
-// end
+always_ff @( posedge clk ) begin : state_update
+    state <= next_state;
+    muxsel <= new_muxsel;
+end
 
 endmodule
