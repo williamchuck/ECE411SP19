@@ -1,12 +1,11 @@
 module hdu (
-    input logic no_mem,
-    input logic ir_out,
-
-    output logic no_hazard,
-    //TODO: Add forwarding signal to FWU
+    input logic dmem_read_EX,
+    input logic rs1,
+    input logic rs2,
+    input logic rd_EX,
     output logic stall
 );
 
-assign no_hazard = 1'd1;
+assign stall = dmem_read_EX && (rs1 == rd_EX || rs2 == rd_EX);
     
 endmodule

@@ -10,7 +10,8 @@ typedef enum bit [6:0] {
     op_store = 7'b0100011, //store (S type)
     op_imm   = 7'b0010011, //arith ops with register/immediate operands (I type)
     op_reg   = 7'b0110011, //arith ops with register operands (R type)
-    op_csr   = 7'b1110011  //control and status register (I type)
+    op_csr   = 7'b1110011, //control and status register (I type)
+    op_nop   = 7'b0000000  //no-op
 } rv32i_opcode;
 
 typedef enum bit [2:0] {
@@ -62,6 +63,7 @@ typedef struct packed {
     rv32i_opcode opcode;
     alu_ops aluop;
     branch_funct3_t cmpop;
+    logic load_regfile;
     logic dmem_read;
     logic dmem_write;
     logic cmpmux_sel;
