@@ -6,7 +6,11 @@ module cpu_datapath (
     /// I-Mem interface
     input logic imem_resp,
     input logic [31:0] imem_rdata,
+    output logic imem_read,
+    output logic imem_write,
     output logic [31:0] imem_address,
+    output logic [3:0] imem_byte_enable,
+    output logic [31:0] imem_wdata,
 
     // D_Mem interface
     input logic dmem_resp,
@@ -18,19 +22,26 @@ module cpu_datapath (
     output logic [31:0] dmem_wdata
 );
 
+assign imem_read = 1'b1;
+assign imem_write = 1'b0;
+assign imem_byte_enable = 4'hf;
+assign imem_wdata = 32'h00000000;
+
 /// MARK: - Components in IF stage
 
-logic load_pc, pcmux_sel, cmpmux_out, br_en, br_en_MEM, br_en_WB;
-logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, alu_out, alu_out_WB, alu_out_MEM;
+logic [31:0] dmem_wdata_unshifted;
+
+logic stall, no_mem;
+logic pcmux_sel, br_en, br_en_MEM, br_en_WB;
+logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, cmpmux_out, alu_out, alu_out_WB, alu_out_MEM;
 logic [31:0] dmem_rdata_WB;
-rv32i_control_word ctw, ctw_EX, ctw_MEM, ctw_WB;
+rv32i_control_word ctw, ctwmux_out, ctw_EX, ctw_MEM, ctw_WB;
 
 assign imem_address = pc_out;
-assign load_pc = 1'b1;
 pc_register PC
 (
-    .*,
-    .load(load_pc),
+    .clk,
+    .load(no_mem & ~stall),
     .in(pcmux_out),
     .out(pc_out)
 );
@@ -39,12 +50,13 @@ assign pcmux_out = pcmux_sel ? alu_out : pc_out + 32'd4;
 
 /// MARK: - Components in ID stage
 
-logic load_regfile, dmem_address_sel;
+logic load_regfile;
 logic [1:0] alumux1_sel;
 logic [2:0] alumux2_sel;
 logic [4:0] rs1, rs2, rd, ir_rs1, ir_rs2, ir_rd;
+logic [4:0] rs1_EX, rs2_EX;
 logic [4:0] rd_EX, rd_MEM, rd_WB;
-rv32i_word ir_out, ir_out_EX, ir_out_MEM, ir_out_WB
+rv32i_word ir_out, ir_out_EX, ir_out_MEM, ir_out_WB;
 rv32i_word rs1_out, rs2_out, reg_back, alumux1_out, alumux2_out;
 rv32i_word rs1_out_EX, rs2_out_EX, rs2_out_MEM;
 rv32i_opcode opcode;
@@ -61,12 +73,11 @@ regfile regfile
     .in(reg_back),
     .rs1,
     .rs2,
-    .rd,
+    .rd(rd_WB),
     .rs1_out,
     .rs2_out
 );
 
-logic stall;
 
 // TODO: These two modules don't exist yet.
 logic [2:0] funct3;
@@ -75,13 +86,26 @@ assign funct3 = ir_out[14:12];
 assign funct7 = ir_out[31:25];
 assign opcode = rv32i_opcode'(ir_out[6:0]);
 
-control_rom control ( .* );
+control_rom control (
+    .opcode,
+    .funct3,
+    .funct7,
+    .ir_rs1,
+    .ir_rs2,
+    .ir_rd,
+    .ctw,
+    .rs1,
+    .rs2,
+    .rd
+);
+
+
 hdu hdu
 (
     .dmem_read_EX(ctw_EX.dmem_read),
     .rs1,
     .rs2,
-    .rd_EX(rd_EX),
+    .rd_EX,
     .stall
 );
 
@@ -89,8 +113,8 @@ fwu fwu
 (
     .load_regfile_MEM(ctw_MEM.load_regfile),
     .load_regfile_WB(ctw_WB.load_regfile),
-    .rs1,
-    .rs2,
+    .rs1(rs1_EX),
+    .rs2(rs2_EX),
     .rd_MEM,
     .rd_WB,
     .ctw_alumux1_sel(ctw_EX.alumux1_sel),
@@ -99,7 +123,13 @@ fwu fwu
     .alumux2_sel
 );
 
+assign ctwmux_out = stall ? 32'h00000000 : ctw;
+
 /// MARK: - Components in EX stage
+
+assign rs1_EX = ir_out_EX[19:15];
+assign rs2_EX = ir_out_EX[24:20];
+assign rd_EX = ir_out_EX[11:7];
 
 // Note that alumux1_sel and alumux2_sel are computed by FWU.
 assign pcmux_sel = ctw_EX.pcmux_sel[1] ? br_en : ctw_EX.pcmux_sel[0];
@@ -143,13 +173,7 @@ alu alu
     .f(alu_out)
 );
 
-mux2 cmpmux
-(
-    .sel(ctw_EX.cmpmux_sel),
-    .a(rs2_out_EX),
-    .b(i_imm),
-    .f(cmpmux_out)
-);
+assign cmpmux_out = ctw_EX.cmpmux_sel ? i_imm : rs2_out_EX;
 
 compare cmp
 (
@@ -162,30 +186,102 @@ compare cmp
 /// MARK: - Components in MEM stage
 
 assign rd_MEM = ir_out_MEM[11:7];
-assign dmem_address_sel = ctw_MEM.dmem_address_sel;
 assign dmem_read = ctw_MEM.dmem_read;
 assign dmem_write = ctw_MEM.dmem_write;
-assign dmem_address = dmem_address_sel ? alu_out_MEM : pc_out_MEM;
-assign dmem_wdata = rs2_out_MEM;
+assign dmem_address = alu_out_MEM;
+assign dmem_wdata_unshifted = rs2_out_MEM;
 always_comb begin : dmem_byte_enable_logic
     case(store_funct3_t'(funct3))
         sb: begin
             case(dmem_address[1:0])
-                2'b00: dmem_byte_enable = 4'h1;
-                2'b01: dmem_byte_enable = 4'h2;
-                2'b10: dmem_byte_enable = 4'h4;
-                2'b11: dmem_byte_enable = 4'h8;
-                default: ;
+                2'b00: begin
+                    dmem_byte_enable = 4'h1;
+                    dmem_wdata = {24'd0, dmem_wdata_unshifted[7:0]};
+                end
+
+                2'b01: begin
+                    dmem_byte_enable = 4'h2;
+                    dmem_wdata = {16'd0, dmem_wdata_unshifted[15:8],  8'd0};
+                end
+                2'b10: begin
+                    dmem_byte_enable = 4'h4;
+                    dmem_wdata = {8'd0, dmem_wdata_unshifted[23:16],  16'd0};
+                end
+                2'b11: begin
+                    dmem_byte_enable = 4'h8;
+                    dmem_wdata = {dmem_wdata_unshifted[31:24], 1'd0};
+                end
+                default: begin 
+                    dmem_byte_enable = 4'h0;
+                    dmem_wdata = 32'd0;
+                end
             endcase
         end
         sh: begin
             case(dmem_address[1:0])
-                2'b00: dmem_byte_enable = 4'h3;
-                2'b10: dmem_byte_enable = 4'hc;
-                default: dmem_byte_enable = 4'h0;
+                2'b00: begin
+                    dmem_byte_enable = 4'h3;
+                    dmem_wdata = {16'd0, dmem_wdata_unshifted[15:0]};
+                end
+                2'b10: begin
+                    dmem_byte_enable = 4'hc;
+                    dmem_wdata = {dmem_wdata_unshifted[31:16], 16'd0};
+                end
+                default: begin 
+                    dmem_byte_enable = 4'h0;
+                    dmem_wdata = 32'd0;
+                end
             endcase
         end
-        default: dmem_byte_enable = 4'h0;
+        default: begin
+            dmem_byte_enable = 4'h0;
+            dmem_wdata = 32'd0;
+        end
+    endcase
+end
+
+rv32i_word dmem_rdata_shifted;
+always_comb begin : dmem_rdata_shifting
+    dmem_rdata_shifted = dmem_rdata;
+    case(load_funct3_t'(funct3))
+        lb: begin
+            case(dmem_address[1:0])
+                2'b00: dmem_rdata_shifted = {{24{dmem_rdata[7]}}, dmem_rdata[7:0]};
+                2'b01: dmem_rdata_shifted = {{24{dmem_rdata[15]}}, dmem_rdata[15:8]};
+                2'b10: dmem_rdata_shifted = {{24{dmem_rdata[23]}}, dmem_rdata[23:16]};
+                2'b11: dmem_rdata_shifted = {{24{dmem_rdata[31]}}, dmem_rdata[31:24]};
+                default: ;
+            endcase
+        end
+
+        lh: begin
+            case(dmem_address[1:0])
+                2'b00: dmem_rdata_shifted = {{16{dmem_rdata[15]}}, dmem_rdata[15:0]};
+                2'b10: dmem_rdata_shifted = {{16{dmem_rdata[31]}}, dmem_rdata[31:16]};
+                default: ;
+            endcase
+        end
+
+        lw: ;
+
+        lbu: begin
+            case(dmem_address[1:0])
+                2'b00: dmem_rdata_shifted = {24'd0, dmem_rdata[7:0]};
+                2'b01: dmem_rdata_shifted = {24'd0, dmem_rdata[15:8]};
+                2'b10: dmem_rdata_shifted = {24'd0, dmem_rdata[23:16]};
+                2'b11: dmem_rdata_shifted = {24'd0, dmem_rdata[31:24]};
+                default: ;
+            endcase
+        end
+
+        lhu: begin
+            case(dmem_address[1:0])
+                2'b00: dmem_rdata_shifted = {16'd0, dmem_rdata[15:0]};
+                2'b10: dmem_rdata_shifted = {16'd0, dmem_rdata[31:16]};
+                default: ;
+            endcase
+        end
+        default: ;
     endcase
 end
 
@@ -206,7 +302,6 @@ end
 
 /// MARK: - IF/ID pipeline register
 
-logic no_mem;
 assign no_mem = imem_resp & (dmem_resp | (~dmem_write & ~dmem_read));
 
 register ir
@@ -239,7 +334,7 @@ register ID_EX_ctw
 (
     .*,
     .load(no_mem),
-    .in(ctw),
+    .in(ctwmux_out),
     .out(ctw_EX)
 );
 
@@ -339,7 +434,7 @@ register MEM_WB_dmem_rdata
 (
     .*,
     .load(no_mem),
-    .in(dmem_rdata),
+    .in(dmem_rdata_shifted),
     .out(dmem_rdata_WB)
 );
 

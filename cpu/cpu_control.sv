@@ -14,6 +14,8 @@ module control_rom
     output rv32i_reg rd
 );
 
+logic error;
+
 always_comb begin : control_word_generation_logic
     ctw.opcode = opcode;
     ctw.aluop = alu_ops'(funct3);
@@ -24,10 +26,13 @@ always_comb begin : control_word_generation_logic
     ctw.cmpmux_sel = 1'd0;
     ctw.alumux1_sel = 2'd0;
     ctw.alumux2_sel = 3'd0;
-    ctw.dmem_address_sel = 1'd0;
+    ctw.pcmux_sel = 2'd0;
+    ctw.load_regfile = 1'd0;
+    ctw.padding = 5'd0;
     rs1 = 5'd0;
     rs2 = 5'd0;
     rd = 5'd0;
+    error = 1'd0;
     
     case(opcode)
         op_lui: begin
@@ -75,7 +80,6 @@ always_comb begin : control_word_generation_logic
         op_load: begin
             ctw.load_regfile = 1'd1;
             ctw.aluop = alu_add;
-            ctw.dmem_address_sel = 1'd1;
             ctw.dmem_read = 1'b1;
             ctw.wbmux_sel = 3'd3;
             rs1 = ir_rs1;
@@ -84,7 +88,6 @@ always_comb begin : control_word_generation_logic
 
         op_store: begin
             ctw.aluop = alu_add;
-            ctw.dmem_address_sel = 1'd1;
             ctw.alumux2_sel = 3'd3;
             ctw.dmem_write = 1'b1;
             rs1 = ir_rs1;
@@ -130,7 +133,12 @@ always_comb begin : control_word_generation_logic
                 ctw.alumux2_sel = 3'd5;
             end
         end
-        default: $display("Unknown opcode");
+
+        op_nop: ;
+        default: begin
+            $display("Unknown opcode");
+            error = 1'd1;
+        end
     endcase
 end
 

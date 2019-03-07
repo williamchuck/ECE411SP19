@@ -67,11 +67,11 @@ typedef struct packed {
     logic dmem_read;
     logic dmem_write;
     logic cmpmux_sel;
-    logic dmem_address_sel;
     logic [1:0] pcmux_sel;
     logic [1:0] alumux1_sel;
     logic [2:0] wbmux_sel;
     logic [2:0] alumux2_sel;
+    logic [4:0] padding;
 } rv32i_control_word;
 
 typedef logic [31:0] rv32i_word;

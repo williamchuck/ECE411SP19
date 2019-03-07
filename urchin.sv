@@ -8,9 +8,9 @@ module urchin (
     output logic pmem_write
 );
 
-logic imem_resp, dmem_resp, dmem_read, dmem_write;
-logic [3:0] dmem_byte_enable;
-logic [31:0] imem_address, imem_rdata, dmem_address, dmem_rdata, dmem_wdata;
+logic imem_resp, imem_read, imem_write, dmem_resp, dmem_read, dmem_write;
+logic [3:0] imem_byte_enable, dmem_byte_enable;
+logic [31:0] imem_address, imem_rdata, imem_wdata, dmem_address, dmem_rdata, dmem_wdata;
 
 cpu_datapath cpu
 (

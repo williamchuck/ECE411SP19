@@ -79,7 +79,7 @@ genvar i;
 generate begin: arrays
 
 for (i = 0; i < num_ways; i++) begin : forloop
-    array valid_array_i
+    array valid_array
     (
         .clk,
         .index,
@@ -89,7 +89,7 @@ for (i = 0; i < num_ways; i++) begin : forloop
         .dataout(valids[i])
     );
     
-    array dirty_array_i
+    array dirty_array
     (
         .clk,
         .index,
@@ -99,7 +99,7 @@ for (i = 0; i < num_ways; i++) begin : forloop
         .dataout(dirtys[i])
     );
     
-    array #(.s_index(s_index), .width(s_tag)) tag_array_i
+    array #(.s_index(s_index), .width(s_tag)) tag_array
     (
         .clk,
         .index,
@@ -109,7 +109,7 @@ for (i = 0; i < num_ways; i++) begin : forloop
         .dataout(tags[i])
     );
     
-    data_array line_i
+    data_array line
     (
         .clk,
         .index,

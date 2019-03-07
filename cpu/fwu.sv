@@ -1,3 +1,5 @@
+import rv32i_types::*;
+
 module fwu (
     input logic load_regfile_MEM,
     input logic load_regfile_WB,
@@ -18,7 +20,7 @@ always_comb begin : data_forwarding_logic
         alumux2_sel = (rd_MEM == rs2) ? 3'd6 : ctw_alumux2_sel;
     end else if (load_regfile_WB && rd_WB != 0) begin
         alumux1_sel = (rd_WB == rs1) ? 2'd3 : ctw_alumux1_sel;
-        alumux2_sel = (rd_WB == rs2) ? 2'd7 : ctw_alumux2_sel;
+        alumux2_sel = (rd_WB == rs2) ? 3'd7 : ctw_alumux2_sel;
     end else begin
         alumux1_sel = ctw_alumux1_sel;
         alumux2_sel = ctw_alumux2_sel;

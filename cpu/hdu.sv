@@ -1,8 +1,10 @@
+import rv32i_types::*;
+
 module hdu (
     input logic dmem_read_EX,
-    input logic rs1,
-    input logic rs2,
-    input logic rd_EX,
+    input rv32i_reg rs1,
+    input rv32i_reg rs2,
+    input rv32i_reg rd_EX,
     output logic stall
 );
 

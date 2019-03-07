@@ -7,7 +7,11 @@ module cache_hierarchy #(
 )
 (
     input clk,
+    input imem_read,
+    input imem_write,
     input logic [31:0] imem_address,
+    input logic [3:0] imem_byte_enable,
+    input logic [31:0] imem_wdata,
     output logic imem_resp,
     output logic [31:0] imem_rdata,
 
@@ -53,8 +57,8 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
 (
     .clk,
     .hit(icache_hit),
-    .upstream_read(1'b0),
-    .upstream_write(1'b0),
+    .upstream_read(imem_read),
+    .upstream_write(imem_write),
     .upstream_address(imem_address),
     .upstream_wdata({s_line{1'b0}}),
     .upstream_rdata(icache_rdata),
