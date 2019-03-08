@@ -61,7 +61,12 @@ onehot_mux #(s_way, s_tag) tagmux
 
 lru_manager #(s_way) LRUM
 (
-    .*
+    //inputs
+    .lru,
+    .hits,
+    //outputs
+    .way,
+    .new_lru
 );
 
 array #(.s_index(s_index), .width(num_ways-1)) lru_store
