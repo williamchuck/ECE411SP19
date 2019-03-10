@@ -32,12 +32,54 @@ logic downstream_address_sel, ld_wb, ld_LRU, new_dirty;
 cache_datapath_core #(
     .s_offset(s_offset), .s_index(s_index), .s_way(s_way)) datapath
 (
-    .*
+    .clk,
+
+    // Datapath-Control interface
+    .cache_read,
+    .cache_load_en,
+    .downstream_address_sel,
+    .ld_wb,
+    .ld_LRU,
+    .new_dirty,
+    .hit,
+    .valid,
+    .dirty,
+
+    // Upstream interface
+    .upstream_address,
+    .upstream_wdata,
+    .upstream_rdata,
+
+    // Downstream interface
+    .downstream_rdata,
+    .downstream_wdata,
+    .downstream_address
 );
 
 cache_control control
 (
-    .*
+    .clk,
+
+    // Control-Datapath interface
+    .hit,
+    .valid,
+    .dirty,
+    .cache_read,
+    .cache_load_en,
+    .downstream_address_sel,
+    .ld_wb,
+    .ld_LRU,
+    .new_dirty,
+
+    // Cache-CPU interface
+    .upstream_read,
+    .upstream_write,
+    .upstream_resp,
+
+    // Cache-Memory interface
+    .downstream_resp,
+    .downstream_read,
+    .downstream_write
 );
     
 endmodule

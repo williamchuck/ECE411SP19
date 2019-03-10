@@ -1,3 +1,6 @@
+`define INSN 0
+`define DATA 1
+
 module cache_arbiter #(
     parameter s_offset = 5,
     parameter s_index  = 3,
@@ -7,6 +10,13 @@ module cache_arbiter #(
 )
 (
     input logic clk,
+    input logic imem_read,
+    input logic dmem_read,
+    input logic dmem_write,
+    output logic icache_read,
+    output logic dcache_read,
+    output logic dcache_write,
+
     input logic l2_icache_read,
     input logic l2_icache_write,
     input logic [31:0] l2_icache_address,
@@ -29,15 +39,23 @@ module cache_arbiter #(
     output logic [s_line-1:0] l2_wdata
 );
 
-logic icache_sel, dcache_sel;
+logic muxsel_imm, muxsel_delayed, muxsel;
+logic arbiter_active_imm, arbiter_active_delayed, arbiter_active;
+logic tiebreaker; // last tie breaker
+
+initial begin
+    tiebreaker = 1'b0;
+end
+
+assign muxsel = l2_resp ? muxsel_delayed : muxsel_imm;
+assign arbiter_active = l2_resp ? arbiter_active_delayed : arbiter_active_imm;
+
 assign icache_sel = l2_icache_read | l2_icache_write;
 assign dcache_sel = l2_dcache_read | l2_dcache_write;
 
-logic muxsel, new_muxsel;
-
-enum int unsigned {
-    INSN, DATA
-} state, next_state;
+assign icache_read = (arbiter_active & muxsel == `DATA) ? 1'b0 : imem_read;
+assign dcache_read = (arbiter_active & muxsel == `INSN) ? 1'b0 : dmem_read;
+assign dcache_write = (arbiter_active & muxsel == `INSN) ? 1'b0 : dmem_write;
 
 assign l2_read = muxsel ? l2_dcache_read : l2_icache_read;
 assign l2_write = muxsel ? l2_dcache_write : l2_icache_write;
@@ -48,45 +66,21 @@ assign l2_dcache_rdata = muxsel ? l2_rdata : {s_line{1'bX}};
 assign l2_icache_resp = muxsel ? 1'b0 : l2_resp;
 assign l2_dcache_resp = muxsel ? l2_resp : 1'b0;
 
-// assign muxsel = 1'b1;
-
-always_comb begin : state_action
-    case({dcache_sel, icache_sel})
-        2'b00: new_muxsel = muxsel;
-        2'b01: new_muxsel = 0;
-        2'b10: new_muxsel = 1;
-        2'b11: begin
-            case(state)
-                INSN: new_muxsel = 0;
-                DATA: new_muxsel = 1;
-            endcase
-        end
-        default: ;
+always_comb begin : mux_sel_logic
+    case({icache_sel, dcache_sel})
+        2'b00: {muxsel_imm, arbiter_active_imm} = 2'b00;
+        2'b10: {muxsel_imm, arbiter_active_imm} = {`INSN, 1'b1};
+        2'b01: {muxsel_imm, arbiter_active_imm} = {`DATA, 1'b1};
+        2'b11: {muxsel_imm, arbiter_active_imm} = {tiebreaker, 1'b1};
     endcase
 end
 
-always_comb begin : next_state_logic
-    next_state = state;
+always_ff @( posedge clk ) begin
+    muxsel_delayed <= muxsel_imm;
+    arbiter_active_delayed <= arbiter_active_imm;
     if (l2_resp) begin
-        case({dcache_sel, icache_sel})
-            2'b00: next_state = state;
-            2'b01: next_state = DATA;
-            2'b10: next_state = INSN;
-            2'b11: begin
-              if(l2_resp) begin
-                case(state)
-                    INSN: next_state = DATA;
-                    DATA: next_state = INSN;
-                endcase
-              end
-            end
-        endcase
+        tiebreaker <= ~tiebreaker;
     end
-end
-
-always_ff @( posedge clk ) begin : state_update
-    state <= next_state;
-    muxsel <= new_muxsel;
 end
 
 endmodule

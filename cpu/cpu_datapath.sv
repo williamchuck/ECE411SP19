@@ -190,7 +190,7 @@ assign dmem_read = ctw_MEM.dmem_read;
 assign dmem_write = ctw_MEM.dmem_write;
 assign dmem_address = alu_out_MEM;
 assign dmem_wdata_unshifted = rs2_out_MEM;
-always_comb begin : dmem_byte_enable_logic
+always_comb begin
     case(store_funct3_t'(funct3))
         sb: begin
             case(dmem_address[1:0])
@@ -241,7 +241,7 @@ always_comb begin : dmem_byte_enable_logic
 end
 
 rv32i_word dmem_rdata_shifted;
-always_comb begin : dmem_rdata_shifting
+always_comb begin
     dmem_rdata_shifted = dmem_rdata;
     case(load_funct3_t'(funct3))
         lb: begin
@@ -304,13 +304,15 @@ end
 
 assign no_mem = imem_resp & (dmem_resp | (~dmem_write & ~dmem_read));
 
-register ir
-(
-    .clk,
-    .load(no_mem & ~stall),
-    .in(imem_rdata),
-    .out(ir_out)
-);
+// register ir
+// (
+//     .clk,
+//     .load(no_mem & ~stall),
+//     .in(imem_rdata),
+//     .out(ir_out)
+// );
+
+assign ir_out = imem_rdata;
 
 register IF_ID_pc
 (
@@ -430,13 +432,15 @@ register MEM_WB_alu_out
     .out(alu_out_WB)
 );
 
-register MEM_WB_dmem_rdata
-(
-    .*,
-    .load(no_mem),
-    .in(dmem_rdata_shifted),
-    .out(dmem_rdata_WB)
-);
+// register MEM_WB_dmem_rdata
+// (
+//     .*,
+//     .load(no_mem),
+//     .in(dmem_rdata_shifted),
+//     .out(dmem_rdata_WB)
+// );
+
+assign dmem_rdata_WB = dmem_rdata_shifted;
 
 register MEM_WB_ir
 (

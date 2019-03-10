@@ -33,67 +33,67 @@ end
 /* Clock generator */
 always #5 clk = ~clk;
 
-always @(posedge clk)
-begin
-    if (cpu.control.error == 1'd1) begin
-        $finish;
-    end
-    // if (dmem_address <= 32'h00000b00 && dmem_write) begin
-    //     $display("Writing data to imem");
-    //     $finish;
-    // end
-    if (pmem_write & pmem_resp) begin
-        write_address = pmem_address[31:5];
-        write_data = pmem_wdata;
-        write = 1;
-    end else begin
-        write_address = 27'hx;
-        write_data = 256'hx;
-        write = 0;
-    end
-    if (pm_error) begin
-        halt = 1;
-        $display("Halting with error!");
-        $finish;
-    end else 
-    if (cpu.no_mem & ~cpu.stall & (cpu.pc_out == cpu.pcmux_out))
-    begin
-        halt = 1;
-        $display("Halting without error");
-        $finish;
-    end
-    if (cpu.no_mem & ~cpu.stall) order = order + 1;
-end
+// always @(posedge clk)
+// begin
+//     if (cpu.control.error == 1'd1) begin
+//         $finish;
+//     end
+//     // if (dmem_address <= 32'h00000b00 && dmem_write) begin
+//     //     $display("Writing data to imem");
+//     //     $finish;
+//     // end
+//     if (pmem_write & pmem_resp) begin
+//         write_address = pmem_address[31:5];
+//         write_data = pmem_wdata;
+//         write = 1;
+//     end else begin
+//         write_address = 27'hx;
+//         write_data = 256'hx;
+//         write = 0;
+//     end
+//     if (pm_error) begin
+//         halt = 1;
+//         $display("Halting with error!");
+//         $finish;
+//     end else 
+//     if (cpu.no_mem & ~cpu.stall & (cpu.pc_out == cpu.pcmux_out))
+//     begin
+//         halt = 1;
+//         $display("Halting without error");
+//         $finish;
+//     end
+//     if (cpu.no_mem & ~cpu.stall) order = order + 1;
+// end
 
 
-// urchin dut(
-//     .*
-// );
-
-cpu_datapath cpu
-(
+urchin dut(
     .*
 );
+
+// cpu_datapath cpu
+// (
+//     .*
+// );
 
 // cache_hierarchy cache
 // (
 //     .*
 // );
 
-magic_memory_dp mem
-(
-    .*
-);
-
-// physical_memory memory(
-//     .clk,
-//     .read(pmem_read),
-//     .write(pmem_write),
-//     .address(pmem_address),
-//     .wdata(pmem_wdata),
-//     .resp(pmem_resp),
-//     .error(pm_error),
-//     .rdata(pmem_rdata)
+// magic_memory_dp mem
+// (
+//     .*
 // );
+
+physical_memory memory(
+    .clk,
+    .read(pmem_read),
+    .write(pmem_write),
+    .address(pmem_address),
+    .wdata(pmem_wdata),
+    .resp(pmem_resp),
+    .error(pm_error),
+    .rdata(pmem_rdata)
+);
 
 endmodule : urchin_tb

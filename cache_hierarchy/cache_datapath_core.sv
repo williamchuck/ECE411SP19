@@ -117,8 +117,10 @@ for (i = 0; i < num_ways; i++) begin : forloop
     data_array line
     (
         .clk,
-        .index,
+        .read(1'b1),
         .write_en({s_mask{cache_load_en & way[i]}}),
+        .rindex(index),
+        .windex(index),
         .datain(inmux_out),
         .dataout(datas[i])
     );

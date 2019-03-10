@@ -45,10 +45,15 @@ always_comb begin : state_based_action
     downstream_write = 0;
 
     case(state)
-        IDLE: cache_read = upstream_read | upstream_write;
+
+        IDLE: begin
+            cache_read = 1;
+            // upstream_resp = (upstream_read | upstream_write) & hit;
+        end
 
         ACTION: begin
-            downstream_read = ~(hit | downstream_resp);
+            // downstream_read = ~(hit | downstream_resp);
+            downstream_read = ~hit;
             new_dirty = upstream_write;
             if (hit | downstream_resp) begin
                 // upstream_resp = ~wb_required;
@@ -56,6 +61,7 @@ always_comb begin : state_based_action
                 cache_load_en = (~hit | upstream_write);
                 ld_wb = 1;
                 ld_LRU = 1;
+                cache_read = hit | ~wb_required;
             end
         end
 
@@ -63,6 +69,7 @@ always_comb begin : state_based_action
             // upstream_resp = downstream_resp;
             downstream_address_sel = 1;
             downstream_write = ~downstream_resp;
+            cache_read = downstream_resp;
         end
         
         default: ;

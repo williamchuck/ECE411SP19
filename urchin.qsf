@@ -36,18 +36,39 @@
 # -------------------------------------------------------------------------- #
 
 
-set_global_assignment -name FAMILY "Stratix V"
-set_global_assignment -name DEVICE 5SGXEA7H3F35C3
+set_global_assignment -name FAMILY "Stratix III"
+set_global_assignment -name DEVICE AUTO
 set_global_assignment -name TOP_LEVEL_ENTITY urchin
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 13.1
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "20:34:49  MARCH 03, 2019"
-set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Standard Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION 13.1
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name EDA_SIMULATION_TOOL "ModelSim-Altera (SystemVerilog)"
 set_global_assignment -name EDA_OUTPUT_DATA_FORMAT "SYSTEMVERILOG HDL" -section_id eda_simulation
-set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
-set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
-set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name SYSTEMVERILOG_FILE data_array.sv
+set_global_assignment -name SYSTEMVERILOG_FILE array.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/compare.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/alu.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_arbiter.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/ir.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/rv32i_types.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/regfile.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/pc_reg.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/hdu.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/fwu.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/cpu_datapath.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/cpu_control.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/transformer.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/lru_manager.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_datapath_core.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_core.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_control.sv
+set_global_assignment -name SYSTEMVERILOG_FILE urchin.sv
+set_global_assignment -name SYSTEMVERILOG_FILE register.sv
+set_global_assignment -name SYSTEMVERILOG_FILE mux.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy.sv
+set_global_assignment -name SYSTEMVERILOG_FILE test/magic_memory_dual_port.sv
 set_global_assignment -name EDA_TIME_SCALE "1 ns" -section_id eda_simulation
 set_global_assignment -name EDA_TEST_BENCH_ENABLE_STATUS TEST_BENCH_MODE -section_id eda_simulation
 set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH urchin_tb -section_id eda_simulation
@@ -55,37 +76,11 @@ set_global_assignment -name EDA_TEST_BENCH_NAME urchin_tb -section_id eda_simula
 set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id urchin_tb
 set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME urchin_tb -section_id urchin_tb
 set_global_assignment -name EDA_TEST_BENCH_RUN_SIM_FOR "10 us" -section_id urchin_tb
+
+
 set_global_assignment -name EDA_TEST_BENCH_FILE test/urchin_tb.sv -section_id urchin_tb
 set_global_assignment -name EDA_TEST_BENCH_FILE test/physical_memory.sv -section_id urchin_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE test/magic_memory_dual_port.sv -section_id urchin_tb
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
-set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/transformer.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/lru_manager.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_datapath_core.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_core.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_control.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_arbiter.sv
-set_global_assignment -name SYSTEMVERILOG_FILE data_array.sv
-set_global_assignment -name SYSTEMVERILOG_FILE array.sv
-set_global_assignment -name SYSTEMVERILOG_FILE urchin.sv
-set_global_assignment -name SYSTEMVERILOG_FILE register.sv
-set_global_assignment -name SYSTEMVERILOG_FILE mux.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy.sv
-set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
-set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
-set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
-set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
-set_global_assignment -name SYSTEMVERILOG_FILE test/urchin_tb.sv
-set_global_assignment -name SYSTEMVERILOG_FILE test/pseudo_lru.sv
-set_global_assignment -name SYSTEMVERILOG_FILE test/physical_memory.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu/rv32i_types.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu/regfile.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu/pc_reg.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu/ir.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu/hdu.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu/fwu.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu/cpu_datapath.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu/cpu_control.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu/compare.sv
-set_global_assignment -name SYSTEMVERILOG_FILE cpu/alu.sv

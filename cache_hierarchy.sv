@@ -35,14 +35,16 @@ logic [s_offset-1:0] imem_offset, dmem_offset;
 assign imem_offset = {imem_address[s_offset-1:2], 2'd0};
 assign dmem_offset = {dmem_address[s_offset-1:2], 2'd0};
 
+logic icache_read, dcache_read, dcache_write;
 logic l2_icache_resp, l2_icache_read, l2_icache_write, l2_dcache_resp;
 logic l2_dcache_read, l2_dcache_write, l2_read, l2_write, l2_resp;
 logic icache_hit, dcache_hit, l2_hit;
-logic[31:0] l2_icache_address, l2_dcache_address, l2_address;
+logic [31:0] imem_rdata_transformer_out, dmem_rdata_transformer_out;
+logic [31:0] l2_icache_address, l2_dcache_address, l2_address;
 logic [255:0] icache_rdata, l2_icache_rdata, l2_icache_wdata;
 logic [255:0] l2_dcache_wdata, dcache_wdata, dcache_rdata;
 logic [255:0] l2_dcache_rdata_transformed, l2_wdata, l2_rdata, l2_dcache_rdata;
-logic [255:0] dmem_rdatamux_out, imem_rdatamux_out;
+logic [255:0] dmem_rdatamux_out, imem_rdatamux_out, new_imem_rdatamux_out;
 logic [255:0] pmem_rdata_reg_out;
 
 register #(256) pmem_rdata_reg
@@ -57,8 +59,8 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
 (
     .clk,
     .hit(icache_hit),
-    .upstream_read(imem_read),
-    .upstream_write(imem_write),
+    .upstream_read(icache_read),
+    .upstream_write(1'b0),
     .upstream_address(imem_address),
     .upstream_wdata({s_line{1'b0}}),
     .upstream_rdata(icache_rdata),
@@ -75,8 +77,8 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache_core
 (
     .clk,
     .hit(dcache_hit),
-    .upstream_read(dmem_read),
-    .upstream_write(dmem_write),
+    .upstream_read(dcache_read),
+    .upstream_write(dcache_write),
     .upstream_address(dmem_address),
     .upstream_wdata(dcache_wdata),
     .upstream_rdata(dcache_rdata),
@@ -142,7 +144,10 @@ always_comb begin : dmem_rdata_selection
     end
 end
 
+logic [255:0] imem_rdatamux_out_prev, dmem_rdatamux_out_prev;
+
 always_comb begin : imem_rdata_selection
+    // new_imem_rdatamux_out = imem_rdatamux_out;
     if (icache_hit) begin
         imem_rdatamux_out = icache_rdata;
     end else if (l2_hit & l2_read) begin
@@ -152,18 +157,37 @@ always_comb begin : imem_rdata_selection
     end
 end
 
+always_ff @(posedge clk) begin
+    if (pmem_resp) begin
+        imem_rdatamux_out_prev <= imem_rdatamux_out;
+        dmem_rdatamux_out_prev <= dmem_rdatamux_out;
+    end
+end
+
 output_transformer icache_output_transformer
 (
-    .line_data(imem_rdatamux_out),
+    .line_data(pmem_resp ? imem_rdatamux_out : imem_rdatamux_out_prev),
     .offset(imem_offset),
-    .dataout(imem_rdata)
+    .dataout(imem_rdata_transformer_out)
 );
 
 output_transformer dcache_output_transformer
 (
-    .line_data(dmem_rdatamux_out),
+    .line_data(pmem_resp ? dmem_rdatamux_out : dmem_rdatamux_out_prev),
     .offset(dmem_offset),
-    .dataout(dmem_rdata)
+    .dataout(dmem_rdata_transformer_out)
 );
+
+// Pipeline register
+
+always_ff @( posedge clk ) begin
+    if (imem_resp) begin
+        imem_rdata <= imem_rdata_transformer_out;
+    end
+
+    if (dmem_resp) begin
+        dmem_rdata <= dmem_rdata_transformer_out;
+    end
+end
     
 endmodule
