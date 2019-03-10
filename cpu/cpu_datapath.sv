@@ -113,8 +113,8 @@ fwu fwu
 (
     .load_regfile_MEM(ctw_MEM.load_regfile),
     .load_regfile_WB(ctw_WB.load_regfile),
-    .rs1(rs1_EX),
-    .rs2(rs2_EX),
+    .rs1_EX(rs1_EX),
+    .rs2_EX(rs2_EX),
     .rd_MEM,
     .rd_WB,
     .ctw_alumux1_sel(ctw_EX.alumux1_sel),
@@ -304,15 +304,15 @@ end
 
 assign no_mem = imem_resp & (dmem_resp | (~dmem_write & ~dmem_read));
 
-// register ir
-// (
-//     .clk,
-//     .load(no_mem & ~stall),
-//     .in(imem_rdata),
-//     .out(ir_out)
-// );
+register ir
+(
+    .clk,
+    .load(no_mem & ~stall),
+    .in(imem_rdata),
+    .out(ir_out)
+);
 
-assign ir_out = imem_rdata;
+// assign ir_out = imem_rdata;
 
 register IF_ID_pc
 (
@@ -432,15 +432,15 @@ register MEM_WB_alu_out
     .out(alu_out_WB)
 );
 
-// register MEM_WB_dmem_rdata
-// (
-//     .*,
-//     .load(no_mem),
-//     .in(dmem_rdata_shifted),
-//     .out(dmem_rdata_WB)
-// );
+register MEM_WB_dmem_rdata
+(
+    .*,
+    .load(no_mem),
+    .in(dmem_rdata_shifted),
+    .out(dmem_rdata_WB)
+);
 
-assign dmem_rdata_WB = dmem_rdata_shifted;
+// assign dmem_rdata_WB = dmem_rdata_shifted;
 
 register MEM_WB_ir
 (

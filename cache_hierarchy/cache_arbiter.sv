@@ -39,48 +39,99 @@ module cache_arbiter #(
     output logic [s_line-1:0] l2_wdata
 );
 
-logic muxsel_imm, muxsel_delayed, muxsel;
-logic arbiter_active_imm, arbiter_active_delayed, arbiter_active;
-logic tiebreaker; // last tie breaker
+logic muxsel;
+logic load_icache_buffer;
+logic [255:0] icache_buffer_out;
 
-initial begin
-    tiebreaker = 1'b0;
-end
+register #(256) icache_buffer
+(
+    .clk,
+    .load(load_icache_buffer),
+    .in(l2_rdata),
+    .out(icache_buffer_out)
+);
 
-assign muxsel = l2_resp ? muxsel_delayed : muxsel_imm;
-assign arbiter_active = l2_resp ? arbiter_active_delayed : arbiter_active_imm;
+enum integer { NO_TIE, ICACHE, DCACHE } state, next_state;
 
 assign icache_sel = l2_icache_read | l2_icache_write;
 assign dcache_sel = l2_dcache_read | l2_dcache_write;
 
-assign icache_read = (arbiter_active & muxsel == `DATA) ? 1'b0 : imem_read;
-assign dcache_read = (arbiter_active & muxsel == `INSN) ? 1'b0 : dmem_read;
-assign dcache_write = (arbiter_active & muxsel == `INSN) ? 1'b0 : dmem_write;
+assign icache_read = imem_read;
+assign dcache_read = dmem_read;
+assign dcache_write = dmem_write;
 
-assign l2_read = muxsel ? l2_dcache_read : l2_icache_read;
-assign l2_write = muxsel ? l2_dcache_write : l2_icache_write;
-assign l2_address = muxsel ? l2_dcache_address : l2_icache_address;
-assign l2_wdata = muxsel ? l2_dcache_wdata : l2_icache_wdata;
-assign l2_icache_rdata = muxsel ? {s_line{1'bX}} : l2_rdata;
-assign l2_dcache_rdata = muxsel ? l2_rdata : {s_line{1'bX}};
-assign l2_icache_resp = muxsel ? 1'b0 : l2_resp;
-assign l2_dcache_resp = muxsel ? l2_resp : 1'b0;
+initial begin
+    state = NO_TIE;
+end
 
-always_comb begin : mux_sel_logic
+always_comb begin
     case({icache_sel, dcache_sel})
-        2'b00: {muxsel_imm, arbiter_active_imm} = 2'b00;
-        2'b10: {muxsel_imm, arbiter_active_imm} = {`INSN, 1'b1};
-        2'b01: {muxsel_imm, arbiter_active_imm} = {`DATA, 1'b1};
-        2'b11: {muxsel_imm, arbiter_active_imm} = {tiebreaker, 1'b1};
+        2'b00: muxsel = 1'b0;
+        2'b10: muxsel = 1'b0;
+        2'b01: muxsel = 1'b1;
+        2'b11: muxsel = 1'b0;
+    endcase
+end
+
+always_comb begin
+    case(state)
+        NO_TIE: begin
+            l2_read = muxsel ? l2_dcache_read : l2_icache_read;
+            l2_write = muxsel ? l2_dcache_write : l2_icache_write;
+            l2_address = muxsel ? l2_dcache_address : l2_icache_address;
+            l2_wdata = muxsel ? l2_dcache_wdata : l2_icache_wdata;
+            l2_icache_rdata = muxsel ? {s_line{1'bX}} : l2_rdata;
+            l2_dcache_rdata = muxsel ? l2_rdata : {s_line{1'bX}};
+            l2_icache_resp = muxsel ? 1'b0 : l2_resp;
+            l2_dcache_resp = muxsel ? l2_resp : 1'b0;
+            load_icache_buffer = 1'b0;
+        end
+
+        ICACHE: begin
+            l2_read = l2_icache_read;
+            l2_write = l2_icache_write;
+            l2_address = l2_icache_address;
+            l2_wdata = l2_icache_wdata;
+            l2_icache_resp = 1'b0;
+            l2_dcache_resp = 1'b0;
+            l2_icache_rdata = {s_line{1'bX}};
+            l2_dcache_rdata = {s_line{1'bX}};
+            load_icache_buffer = 1'b1;
+        end
+
+        DCACHE: begin
+            l2_read = l2_dcache_read;
+            l2_write = l2_dcache_write;
+            l2_address = l2_dcache_address;
+            l2_wdata = l2_dcache_wdata;
+            l2_icache_resp = l2_resp;
+            l2_dcache_resp = l2_resp;
+            l2_icache_rdata = icache_buffer_out;
+            l2_dcache_rdata = l2_rdata;
+            load_icache_buffer = 1'b0;
+        end
+    endcase
+end
+
+always_comb begin
+    next_state = state;
+    case(state)
+        NO_TIE:
+            if (icache_sel && dcache_sel)
+                next_state = ICACHE;
+
+        ICACHE:
+            if (l2_resp)
+                next_state = DCACHE;
+
+        DCACHE:
+            if (l2_resp)
+                next_state = NO_TIE;
     endcase
 end
 
 always_ff @( posedge clk ) begin
-    muxsel_delayed <= muxsel_imm;
-    arbiter_active_delayed <= arbiter_active_imm;
-    if (l2_resp) begin
-        tiebreaker <= ~tiebreaker;
-    end
+    state <= next_state;
 end
 
 endmodule

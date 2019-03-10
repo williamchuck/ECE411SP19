@@ -158,36 +158,38 @@ always_comb begin : imem_rdata_selection
 end
 
 always_ff @(posedge clk) begin
-    if (pmem_resp) begin
+    if (l2_icache_resp) begin
         imem_rdatamux_out_prev <= imem_rdatamux_out;
+    end
+    if (l2_dcache_resp) begin
         dmem_rdatamux_out_prev <= dmem_rdatamux_out;
     end
 end
 
 output_transformer icache_output_transformer
 (
-    .line_data(pmem_resp ? imem_rdatamux_out : imem_rdatamux_out_prev),
+    .line_data(l2_icache_resp ? imem_rdatamux_out : imem_rdatamux_out_prev),
     .offset(imem_offset),
-    .dataout(imem_rdata_transformer_out)
+    .dataout(imem_rdata)
 );
 
 output_transformer dcache_output_transformer
 (
-    .line_data(pmem_resp ? dmem_rdatamux_out : dmem_rdatamux_out_prev),
+    .line_data(l2_dcache_resp ? dmem_rdatamux_out : dmem_rdatamux_out_prev),
     .offset(dmem_offset),
-    .dataout(dmem_rdata_transformer_out)
+    .dataout(dmem_rdata)
 );
 
-// Pipeline register
+// // Pipeline register
 
-always_ff @( posedge clk ) begin
-    if (imem_resp) begin
-        imem_rdata <= imem_rdata_transformer_out;
-    end
+// always_ff @( posedge clk ) begin
+//     if (imem_resp) begin
+//         imem_rdata <= imem_rdata_transformer_out;
+//     end
 
-    if (dmem_resp) begin
-        dmem_rdata <= dmem_rdata_transformer_out;
-    end
-end
+//     if (dmem_resp) begin
+//         dmem_rdata <= dmem_rdata_transformer_out;
+//     end
+// end
     
 endmodule

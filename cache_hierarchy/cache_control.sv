@@ -47,7 +47,7 @@ always_comb begin : state_based_action
     case(state)
 
         IDLE: begin
-            cache_read = 1;
+            cache_read = 1'b1;
             // upstream_resp = (upstream_read | upstream_write) & hit;
         end
 
@@ -59,17 +59,17 @@ always_comb begin : state_based_action
                 // upstream_resp = ~wb_required;
                 upstream_resp = 1'b1;
                 cache_load_en = (~hit | upstream_write);
-                ld_wb = 1;
-                ld_LRU = 1;
+                ld_wb = 1'b1;
+                ld_LRU = 1'b1;
                 cache_read = hit | ~wb_required;
             end
         end
 
         WRITEBACK: begin
             // upstream_resp = downstream_resp;
-            downstream_address_sel = 1;
-            downstream_write = ~downstream_resp;
-            cache_read = downstream_resp;
+            downstream_address_sel = 1'b1;
+            downstream_write = 1'b1;
+            cache_read = 1'b0;
         end
         
         default: ;
