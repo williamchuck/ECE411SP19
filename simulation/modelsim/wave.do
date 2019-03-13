@@ -14,9 +14,7 @@ add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/rs2_EX
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/a
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/b
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/f
-add wave -noupdate -radix hexadecimal {/urchin_tb/dut/cpu/regfile/data[1]}
-add wave -noupdate -radix hexadecimal {/urchin_tb/dut/cpu/regfile/data[2]}
-add wave -noupdate -radix hexadecimal {/urchin_tb/dut/cpu/regfile/data[3]}
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/regfile/data
 add wave -noupdate -label ctw -radix hexadecimal /urchin_tb/dut/cpu/ctw
 add wave -noupdate -label ctwmux_out -radix hexadecimal /urchin_tb/dut/cpu/ctwmux_out
 add wave -noupdate -label ctw_EX -radix hexadecimal /urchin_tb/dut/cpu/ctw_EX
@@ -186,4 +184,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ps
 update
-WaveRestoreZoom {31542113 ps} {31747193 ps}
+WaveRestoreZoom {4805174 ps} {5010254 ps}

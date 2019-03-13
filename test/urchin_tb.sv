@@ -23,6 +23,8 @@ logic halt;
 logic pm_error;
 logic [63:0] order;
 
+// logic [31:0] ir = dut.cpu.ir.out;
+
 initial
 begin
     clk = 0;
@@ -30,11 +32,14 @@ begin
     halt = 0;
 end
 
+// if (ir == 32'h0000006f) $finish;
+
 /* Clock generator */
 always #5 clk = ~clk;
 
-// always @(posedge clk)
-// begin
+always @(posedge clk)
+begin
+    // if (ir == 32'h0000006f) $finish;
 //     if (cpu.control.error == 1'd1) begin
 //         $finish;
 //     end
@@ -63,37 +68,37 @@ always #5 clk = ~clk;
 //         $finish;
 //     end
 //     if (cpu.no_mem & ~cpu.stall) order = order + 1;
-// end
+end
 
 
-urchin dut(
-    .*
-);
-
-// cpu_datapath cpu
-// (
+// urchin dut(
 //     .*
 // );
+
+cpu_datapath cpu
+(
+    .*
+);
 
 // cache_hierarchy cache
 // (
 //     .*
 // );
 
-// magic_memory_dp mem
-// (
-//     .*
-// );
-
-physical_memory memory(
-    .clk,
-    .read(pmem_read),
-    .write(pmem_write),
-    .address(pmem_address),
-    .wdata(pmem_wdata),
-    .resp(pmem_resp),
-    .error(pm_error),
-    .rdata(pmem_rdata)
+magic_memory_dp mem
+(
+    .*
 );
+
+// physical_memory memory(
+//     .clk,
+//     .read(pmem_read),
+//     .write(pmem_write),
+//     .address(pmem_address),
+//     .wdata(pmem_wdata),
+//     .resp(pmem_resp),
+//     .error(pm_error),
+//     .rdata(pmem_rdata)
+// );
 
 endmodule : urchin_tb

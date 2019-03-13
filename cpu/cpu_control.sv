@@ -137,6 +137,7 @@ always_comb begin : control_word_generation_logic
         op_nop: ;
         default: begin
             $display("Unknown opcode");
+            //$finish;
             error = 1'd1;
         end
     endcase
