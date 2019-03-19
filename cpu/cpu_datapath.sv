@@ -22,12 +22,24 @@ module cpu_datapath (
     output logic [31:0] dmem_wdata
 );
 
-assign imem_read = 1'b1;
+/// MARK: - Components in IF stage
+
+logic fresh_IF, imem_read_prev, imem_resp_prev;
+
+initial begin
+    imem_read_prev = 1'b0;
+    imem_resp_prev = 1'b0;
+end
+
+always_ff @( posedge clk ) begin
+    imem_read_prev <= imem_read;
+    imem_resp_prev <= imem_resp;
+end
+
 assign imem_write = 1'b0;
 assign imem_byte_enable = 4'hf;
 assign imem_wdata = 32'h00000000;
-
-/// MARK: - Components in IF stage
+assign imem_read = fresh_IF | (imem_read_prev & ~imem_resp_prev);
 
 logic [31:0] dmem_wdata_unshifted;
 
@@ -43,7 +55,8 @@ pc_register PC
     .clk,
     .load(no_mem & ~stall),
     .in(pcmux_out),
-    .out(pc_out)
+    .out(pc_out),
+    .fresh(fresh_IF)
 );
 
 assign pcmux_out = pcmux_sel ? alu_out : pc_out + 32'd4;
@@ -78,8 +91,6 @@ regfile regfile
     .rs2_out
 );
 
-
-// TODO: These two modules don't exist yet.
 logic [2:0] funct3;
 logic [6:0] funct7;
 assign funct3 = ir_out[14:12];
@@ -302,7 +313,7 @@ end
 
 /// MARK: - IF/ID pipeline register
 
-assign no_mem = imem_resp & (dmem_resp | (~dmem_write & ~dmem_read));
+assign no_mem = (imem_resp | ~imem_read) & (dmem_resp | (~dmem_write & ~dmem_read));
 
 register ir
 (

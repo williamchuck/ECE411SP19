@@ -39,64 +39,60 @@ module cache_arbiter #(
     output logic [s_line-1:0] l2_wdata
 );
 
-logic muxsel;
-logic load_icache_buffer;
-logic [255:0] icache_buffer_out;
+logic [s_line-1:0] rdata_buffer_out;
+logic pending_resp, next_pending_resp;
+logic icache_enable, dcache_enable;
 
-register #(256) icache_buffer
-(
-    .clk,
-    .load(load_icache_buffer),
-    .in(l2_rdata),
-    .out(icache_buffer_out)
-);
-
-enum integer { NO_TIE, ICACHE, DCACHE } state, next_state;
+enum integer { IDLE, ICACHE, DCACHE } state, next_state;
 
 assign icache_sel = l2_icache_read | l2_icache_write;
 assign dcache_sel = l2_dcache_read | l2_dcache_write;
 
-assign icache_read = imem_read;
-assign dcache_read = dmem_read;
-assign dcache_write = dmem_write;
+assign icache_read = icache_enable & imem_read;
+assign dcache_read = dcache_enable & dmem_read;
+assign dcache_write = dcache_enable & dmem_write;
 
 initial begin
-    state = NO_TIE;
+    state = IDLE;
+    pending_resp = 1'b0;
 end
 
 always_comb begin
-    case({icache_sel, dcache_sel})
-        2'b00: muxsel = 1'b0;
-        2'b10: muxsel = 1'b0;
-        2'b01: muxsel = 1'b1;
-        2'b11: muxsel = 1'b0;
-    endcase
-end
+    l2_read = 1'b0;
+    l2_write = 1'b0;
+    l2_address = 32'b0;
+    l2_wdata = {s_line{1'bX}};
+    l2_icache_rdata = {s_line{1'bX}};
+    l2_dcache_rdata = {s_line{1'bX}};
+    l2_icache_resp = 1'b0;
+    l2_dcache_resp = 1'b0;
+    next_pending_resp = 1'b0;
+    icache_enable = 1'b1;
+    dcache_enable = 1'b1;
 
-always_comb begin
     case(state)
-        NO_TIE: begin
-            l2_read = muxsel ? l2_dcache_read : l2_icache_read;
-            l2_write = muxsel ? l2_dcache_write : l2_icache_write;
-            l2_address = muxsel ? l2_dcache_address : l2_icache_address;
-            l2_wdata = muxsel ? l2_dcache_wdata : l2_icache_wdata;
-            l2_icache_rdata = muxsel ? {s_line{1'bX}} : l2_rdata;
-            l2_dcache_rdata = muxsel ? l2_rdata : {s_line{1'bX}};
-            l2_icache_resp = muxsel ? 1'b0 : l2_resp;
-            l2_dcache_resp = muxsel ? l2_resp : 1'b0;
-            load_icache_buffer = 1'b0;
-        end
+        IDLE: ;
 
         ICACHE: begin
             l2_read = l2_icache_read;
             l2_write = l2_icache_write;
             l2_address = l2_icache_address;
             l2_wdata = l2_icache_wdata;
-            l2_icache_resp = 1'b0;
-            l2_dcache_resp = 1'b0;
-            l2_icache_rdata = {s_line{1'bX}};
-            l2_dcache_rdata = {s_line{1'bX}};
-            load_icache_buffer = 1'b1;
+            l2_icache_rdata = l2_rdata;
+            
+            if (l2_resp) begin
+                if (pending_resp) begin
+                    l2_icache_resp = 1'b1;
+                    l2_dcache_resp = 1'b1;
+                    l2_dcache_rdata = rdata_buffer_out;
+                    next_pending_resp = 1'b0;
+                end else if (~dcache_sel) begin
+                    l2_icache_resp = 1'b1;
+                end else begin
+                    next_pending_resp = 1'b1;
+                end
+            end
+
         end
 
         DCACHE: begin
@@ -104,11 +100,20 @@ always_comb begin
             l2_write = l2_dcache_write;
             l2_address = l2_dcache_address;
             l2_wdata = l2_dcache_wdata;
-            l2_icache_resp = l2_resp;
-            l2_dcache_resp = l2_resp;
-            l2_icache_rdata = icache_buffer_out;
             l2_dcache_rdata = l2_rdata;
-            load_icache_buffer = 1'b0;
+
+            if (l2_resp) begin
+                if (pending_resp) begin
+                    l2_dcache_resp = 1'b1;
+                    l2_icache_resp = 1'b1;
+                    l2_icache_rdata = rdata_buffer_out;
+                    next_pending_resp = 1'b0;
+                end else if (~icache_sel) begin
+                    l2_dcache_resp = 1'b1;
+                end else begin
+                    next_pending_resp = 1'b1;
+                end
+            end
         end
     endcase
 end
@@ -116,22 +121,32 @@ end
 always_comb begin
     next_state = state;
     case(state)
-        NO_TIE:
-            if (icache_sel && dcache_sel)
+        IDLE:
+            if (icache_sel)
                 next_state = ICACHE;
+            else if (dcache_sel)
+                next_state = DCACHE;
 
         ICACHE:
-            if (l2_resp)
+            if (l2_resp & (pending_resp | ~dcache_sel))
+                next_state = IDLE;
+            else if (l2_resp)
                 next_state = DCACHE;
 
         DCACHE:
-            if (l2_resp)
-                next_state = NO_TIE;
+            if (l2_resp & (pending_resp | ~icache_sel))
+                next_state = IDLE;
+            else if (l2_resp)
+                next_state = ICACHE;
     endcase
 end
 
 always_ff @( posedge clk ) begin
     state <= next_state;
+    if (l2_resp) begin
+        rdata_buffer_out <= l2_rdata;
+        pending_resp <= next_pending_resp;
+    end
 end
 
 endmodule
