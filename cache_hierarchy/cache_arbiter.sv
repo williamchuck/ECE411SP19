@@ -42,6 +42,7 @@ module cache_arbiter #(
 logic [s_line-1:0] rdata_buffer_out;
 logic pending_resp, next_pending_resp;
 logic icache_enable, dcache_enable;
+logic icache_sel, dcache_sel;
 
 enum integer { IDLE, ICACHE, DCACHE } state, next_state;
 

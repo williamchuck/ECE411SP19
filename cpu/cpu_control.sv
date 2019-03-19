@@ -24,7 +24,7 @@ always_comb begin : control_word_generation_logic
     ctw.dmem_write = 1'd0;
     ctw.wbmux_sel = 3'd0;
     ctw.cmpmux_sel = 1'd0;
-    ctw.alumux1_sel = 2'd0;
+    ctw.alumux1_sel = 1'd0;
     ctw.alumux2_sel = 3'd0;
     ctw.pcmux_sel = 2'd0;
     ctw.load_regfile = 1'd0;
@@ -45,7 +45,7 @@ always_comb begin : control_word_generation_logic
         op_auipc: begin
             ctw.load_regfile = 1'd1;
             ctw.aluop = alu_add;
-            ctw.alumux1_sel = 2'd1;
+            ctw.alumux1_sel = 1'd1;
             ctw.alumux2_sel = 3'd1;
             rd = ir_rd;
         end
@@ -53,7 +53,7 @@ always_comb begin : control_word_generation_logic
         op_jal: begin
             ctw.load_regfile = 1'd1;
             ctw.pcmux_sel = 2'b01;
-            ctw.alumux1_sel = 2'd1;
+            ctw.alumux1_sel = 1'd1;
             ctw.alumux2_sel = 3'd4;
             ctw.aluop = alu_add;
             ctw.wbmux_sel = 3'd4;
@@ -71,7 +71,7 @@ always_comb begin : control_word_generation_logic
 
         op_br: begin
             ctw.pcmux_sel = 2'b1X;
-            ctw.alumux1_sel = 2'd1;
+            ctw.alumux1_sel = 1'd1;
             ctw.alumux2_sel = 3'd2;
             ctw.aluop = alu_add;
             rs1 = ir_rs1;

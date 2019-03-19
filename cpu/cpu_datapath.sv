@@ -24,7 +24,7 @@ module cpu_datapath (
 
 /// MARK: - Components in IF stage
 
-logic fresh_IF, imem_read_prev, imem_resp_prev;
+logic fresh, imem_read_prev, imem_resp_prev;
 
 initial begin
     imem_read_prev = 1'b0;
@@ -39,7 +39,7 @@ end
 assign imem_write = 1'b0;
 assign imem_byte_enable = 4'hf;
 assign imem_wdata = 32'h00000000;
-assign imem_read = fresh_IF | (imem_read_prev & ~imem_resp_prev);
+assign imem_read = fresh | (imem_read_prev & ~imem_resp_prev);
 
 logic [31:0] dmem_wdata_unshifted;
 
@@ -57,7 +57,7 @@ pc_register PC
     .load(no_mem & ~stall),
     .in(pcmux_out),
     .out(pc_out),
-    .fresh(fresh_IF)
+    .fresh(fresh)
 );
 
 assign pcmux_out = pcmux_sel ? alu_out : pc_out + 32'd4;
@@ -159,12 +159,14 @@ always_comb begin : rs1_2_sel
         2'd0: selected_rs1_EX_out = rs1_out_EX;
         2'd1: selected_rs1_EX_out = regfile_in_MEM;
         2'd2: selected_rs1_EX_out = regfile_in_WB;
+        default:;
     endcase
     selected_rs2_EX_out = 32'd0;
     case(rs2_out_EX_sel)
         2'd0: selected_rs2_EX_out = rs2_out_EX;
         2'd1: selected_rs2_EX_out = regfile_in_MEM;
         2'd2: selected_rs2_EX_out = regfile_in_WB;
+        default:;
     endcase
 end
 
