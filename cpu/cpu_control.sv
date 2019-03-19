@@ -28,7 +28,8 @@ always_comb begin : control_word_generation_logic
     ctw.alumux2_sel = 3'd0;
     ctw.pcmux_sel = 2'd0;
     ctw.load_regfile = 1'd0;
-    ctw.padding = 5'd0;
+    ctw.funct3 = funct3;
+    ctw.funct7 = funct7;
     rs1 = 5'd0;
     rs2 = 5'd0;
     rd = 5'd0;
@@ -119,7 +120,6 @@ always_comb begin : control_word_generation_logic
             if(arith_funct3_t'(funct3) == slt) begin
                 ctw.cmpop = blt;
                 ctw.wbmux_sel = 3'd1;
-                ctw.cmpmux_sel = 1'b1;
             end else if(arith_funct3_t'(funct3) == sltu) begin
                 ctw.cmpop = bltu;
                 ctw.wbmux_sel = 3'd1;
@@ -137,6 +137,7 @@ always_comb begin : control_word_generation_logic
         op_nop: ;
         default: begin
             $display("Unknown opcode");
+            //$finish;
             error = 1'd1;
         end
     endcase
