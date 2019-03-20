@@ -52,6 +52,7 @@ cache_datapath_core #(
     .upstream_rdata,
 
     // Downstream interface
+    .downstream_resp,
     .downstream_rdata,
     .downstream_wdata,
     .downstream_address

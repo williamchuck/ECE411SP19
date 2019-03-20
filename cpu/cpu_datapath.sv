@@ -24,28 +24,39 @@ module cpu_datapath (
 
 /// MARK: - Components in IF stage
 
-logic fresh, imem_read_prev, imem_resp_prev;
+logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, pc_out_WB;
 
-initial begin
-    imem_read_prev = 1'b0;
-    imem_resp_prev = 1'b0;
-end
+// logic imem_read_prev, imem_resp_prev;
+logic imem_permit;
 
-always_ff @( posedge clk ) begin
-    imem_read_prev <= imem_read;
-    imem_resp_prev <= imem_resp;
-end
+blocking_unit imem_blocking_unit
+(
+    .clk,
+    .select(imem_read),
+    .resp(imem_resp),
+    .pc(pc_out),
+    .permit(imem_permit)
+);
+
+// initial begin
+//     imem_read_prev = 1'b0;
+//     imem_resp_prev = 1'b0;
+// end
+
+// always_ff @( posedge clk ) begin
+//     imem_read_prev <= imem_read;
+//     imem_resp_prev <= imem_resp;
+// end
 
 assign imem_write = 1'b0;
 assign imem_byte_enable = 4'hf;
 assign imem_wdata = 32'h00000000;
-assign imem_read = fresh | (imem_read_prev & ~imem_resp_prev);
+// assign imem_read = fresh | (imem_read_prev & ~imem_resp_prev);
+assign imem_read = imem_permit;
 
 logic [31:0] dmem_wdata_unshifted;
-
 logic stall, no_mem;
 logic pcmux_sel, br_en, br_en_MEM, br_en_WB;
-logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, pc_out_WB;
 logic [31:0] cmpmux_out, alu_out, alu_out_WB, alu_out_MEM;
 logic [31:0] dmem_rdata_WB;
 rv32i_control_word ctw, ctwmux_out, ctw_EX, ctw_MEM, ctw_WB;
@@ -56,8 +67,7 @@ pc_register PC
     .clk,
     .load(no_mem & ~stall),
     .in(pcmux_out),
-    .out(pc_out),
-    .fresh(fresh)
+    .out(pc_out)
 );
 
 assign pcmux_out = pcmux_sel ? alu_out : pc_out + 32'd4;
@@ -215,9 +225,20 @@ compare cmp
 
 /// MARK: - Components in MEM stage
 logic [31:0] dmem_address_untruncated;
+logic dmem_permit;
+
+blocking_unit dmem_blocking_unit
+(
+    .clk,
+    .select(ctw_MEM.dmem_read | ctw_MEM.dmem_write),
+    .resp(dmem_resp),
+    .pc(pc_out_MEM),
+    .permit(dmem_permit)
+);
+
 assign rd_MEM = ir_out_MEM[11:7];
-assign dmem_read = ctw_MEM.dmem_read;
-assign dmem_write = ctw_MEM.dmem_write;
+assign dmem_read = ctw_MEM.dmem_read & dmem_permit;
+assign dmem_write = ctw_MEM.dmem_write & dmem_permit;
 assign dmem_address_untruncated = alu_out_MEM;
 assign dmem_address = {alu_out_MEM[31:2], 2'b00};
 assign dmem_wdata_unshifted = rs2_out_MEM;
@@ -321,7 +342,8 @@ always_comb begin
         3'd0: regfile_in_MEM = alu_out_MEM;
         3'd1: regfile_in_MEM = {31'b0, br_en_MEM};
         3'd2: regfile_in_MEM = u_imm;
-        3'd3: regfile_in_MEM = dmem_rdata_shifted;
+        // 3'd3: regfile_in_MEM = dmem_rdata_shifted;
+        3'd3: regfile_in_MEM = 32'd0;
         3'd4: regfile_in_MEM = pc_out_MEM + 4;
         default: regfile_in_MEM = 32'bX;
     endcase

@@ -43,11 +43,11 @@ logic icache_valid, dcache_valid, l2_valid;
 logic [31:0] imem_rdata_transformer_out, dmem_rdata_transformer_out;
 logic [31:0] l2_icache_address, l2_dcache_address, l2_address;
 logic [255:0] icache_rdata, l2_icache_rdata, l2_icache_wdata;
+logic [255:0] icache_rdata_curr, icache_rdata_prev;
+logic [255:0] dcache_rdata_curr, dcache_rdata_prev;
 logic [255:0] l2_dcache_wdata, dcache_wdata, dcache_rdata;
 logic [255:0] dcache_downstream_rdata_transformed, l2_wdata, l2_rdata, l2_dcache_rdata;
-logic [255:0] dmem_rdatamux_out_curr, imem_rdatamux_out_curr;
 logic [255:0] pmem_rdata_reg_out;
-logic [255:0]imem_rdatamux_out, dmem_rdatamux_out;
 
 register #(256) pmem_rdata_reg
 (
@@ -66,10 +66,10 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
     .upstream_write(1'b0),
     .upstream_address(imem_address),
     .upstream_wdata({s_line{1'b0}}),
-    .upstream_rdata(icache_rdata),
+    .upstream_rdata(icache_rdata_curr),
     .upstream_resp(imem_resp),
     .downstream_resp(l2_icache_resp),
-    .downstream_rdata(imem_rdatamux_out),
+    .downstream_rdata(l2_icache_rdata),
     .downstream_wdata(l2_icache_wdata),
     .downstream_read(l2_icache_read),
     .downstream_write(l2_icache_write),
@@ -85,7 +85,7 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache_core
     .upstream_write(dcache_write),
     .upstream_address(dmem_address),
     .upstream_wdata(dcache_wdata),
-    .upstream_rdata(dcache_rdata),
+    .upstream_rdata(dcache_rdata_curr),
     .upstream_resp(dmem_resp),
     .downstream_resp(l2_dcache_resp),
     .downstream_rdata(dcache_downstream_rdata_transformed),
@@ -121,7 +121,7 @@ cache_arbiter arbiter
 
 input_transformer dcache_downstream_rdata_transformer
 (
-    .line_data(dmem_rdatamux_out),
+    .line_data(l2_dcache_rdata),
     .word_data(dmem_wdata),
     .enable(dmem_write),
     .offset(dmem_offset),
@@ -139,79 +139,45 @@ input_transformer dcache_upstream_wdata_transformer
     .dataout(dcache_wdata)
 );
 
-always_comb begin : dmem_rdata_selection
-    if (dcache_hit) begin
-        dmem_rdatamux_out_curr = dcache_rdata;
-    end else if (l2_hit & l2_read) begin
-        dmem_rdatamux_out_curr = l2_rdata;
-    end else begin
-        dmem_rdatamux_out_curr = pmem_rdata;
-    end
-end
-
-logic [255:0] imem_rdatamux_out_prev, dmem_rdatamux_out_prev;
-
-always_comb begin : imem_rdata_selection
-    if (icache_hit) begin
-        imem_rdatamux_out_curr = icache_rdata;
-    end else if (l2_hit & l2_read) begin
-        imem_rdatamux_out_curr = l2_rdata;
-    end else begin
-        imem_rdatamux_out_curr = pmem_rdata;
-    end
-end
-
 always_ff @(posedge clk) begin
     if (l2_icache_resp) begin
-        imem_rdatamux_out_prev <= imem_rdatamux_out_curr;
+        icache_rdata_prev <= icache_rdata_curr;
     end
     if (l2_dcache_resp) begin
-        dmem_rdatamux_out_prev <= dmem_rdatamux_out_curr;
+        dcache_rdata_prev <= dcache_rdata_curr;
     end
 end
 
 always_comb begin
     if (icache_hit & icache_valid) begin
-        imem_rdatamux_out = imem_rdatamux_out_curr;
+        icache_rdata = icache_rdata_curr;
     end else if (l2_icache_resp) begin
-        imem_rdatamux_out = imem_rdatamux_out_curr;
+        icache_rdata = icache_rdata_curr;
     end else begin
-        imem_rdatamux_out = imem_rdatamux_out_prev;
+        icache_rdata = icache_rdata_prev;
     end
 
     if (dcache_hit & dcache_valid) begin
-        dmem_rdatamux_out = dmem_rdatamux_out_curr;
+        dcache_rdata = dcache_rdata_curr;
     end else if (l2_dcache_resp) begin
-        dmem_rdatamux_out = dmem_rdatamux_out_curr;
+        dcache_rdata = dcache_rdata_curr;
     end else begin
-        dmem_rdatamux_out = dmem_rdatamux_out_prev;
+        dcache_rdata = dcache_rdata_prev;
     end
 end
 
 output_transformer icache_output_transformer
 (
-    .line_data(imem_rdatamux_out),
+    .line_data(icache_rdata),
     .offset(imem_offset),
     .dataout(imem_rdata)
 );
 
 output_transformer dcache_output_transformer
 (
-    .line_data(dmem_rdatamux_out),
+    .line_data(dcache_rdata),
     .offset(dmem_offset),
     .dataout(dmem_rdata)
 );
-
-// // Pipeline register
-
-// always_ff @( posedge clk ) begin
-//     if (imem_resp) begin
-//         imem_rdata <= imem_rdata_transformer_out;
-//     end
-
-//     if (dmem_resp) begin
-//         dmem_rdata <= dmem_rdata_transformer_out;
-//     end
-// end
     
 endmodule
