@@ -2,17 +2,32 @@ import rv32i_types::*;
 
 module control_rom
 (
-    input rv32i_opcode opcode,
-    input logic [2:0] funct3,
-    input logic [6:0] funct7,
-    input rv32i_reg ir_rs1,
-    input rv32i_reg ir_rs2,
-    input rv32i_reg ir_rd,
+    input rv32i_word ir,
+    // input rv32i_opcode opcode,
+    // input logic [2:0] funct3,
+    // input logic [6:0] funct7,
+    // input rv32i_reg ir_rs1,
+    // input rv32i_reg ir_rs2,
+    // input rv32i_reg ir_rd,
     output rv32i_control_word ctw,
     output rv32i_reg rs1,
     output rv32i_reg rs2,
     output rv32i_reg rd
 );
+
+rv32i_opcode opcode;
+logic [1:0] c_opcode;
+rv32i_reg ir_rs1, ir_rs2, ir_rd;
+logic [2:0] funct3, c_funct3;
+logic [6:0] funct7;
+
+assign ir_rs1 = ir[19:15];
+assign ir_rs2 = ir[24:20];
+assign ir_rd = ir[11:7]
+assign funct3 = ir[14:12];
+assign funct7 = ir[31:25];
+assign opcode = rv32i_opcode'(ir[6:0]);
+assign c_opcode = ir[1:0];
 
 logic error;
 
@@ -135,10 +150,67 @@ always_comb begin : control_word_generation_logic
         end
 
         op_nop: ;
+
         default: begin
-            $display("Unknown opcode");
-            //$finish;
-            error = 1'd1;
+            // C extension
+            case({c_opcode, c_funct3})
+                c_addi4spn: begin
+                    ctw.aluop = alu_add;
+                end
+
+                c_lw: begin
+                end
+
+                c_sw: begin
+                end
+
+                c_addi: begin
+                end
+
+                c_jal: begin
+                end
+
+                c_li: begin
+                    
+                end
+
+                c_lui: begin
+                    // Complicated
+                end
+
+                c_alu: begin
+                    
+                end
+
+                c_j: begin
+                    
+                end
+
+                c_beqz: begin
+                    
+                end
+
+                c_bnez: begin
+                    
+                end
+
+                c_slli: begin
+                    
+                end
+
+                c_lwsp: begin
+                    
+                end
+
+                c_jrmvadd: begin
+                    
+                end
+
+                c_swsp: begin
+                    
+                end
+                default: ;
+            endcase
         end
     endcase
 end

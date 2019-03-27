@@ -77,17 +77,13 @@ assign pcmux_out = pcmux_sel ? alu_out : pc_out + 32'd4;
 logic load_regfile;
 logic rs1_out_sel, rs2_out_sel;
 logic [1:0] rs1_out_EX_sel, rs2_out_EX_sel;
-logic [4:0] rs1, rs2, rd, ir_rs1, ir_rs2, ir_rd;
+logic [4:0] rs1, rs2, rd;
 logic [4:0] rs1_EX, rs2_EX;
 logic [4:0] rd_EX, rd_MEM, rd_WB;
 rv32i_word ir_out, ir_out_EX, ir_out_MEM, ir_out_WB;
 rv32i_word rs1_out, rs2_out, regfile_in_WB, regfile_in_MEM, alumux1_out, alumux2_out;
 rv32i_word rs1_out_EX, rs2_out_EX, rs2_out_MEM;
-rv32i_opcode opcode;
 
-assign ir_rs1 = ir_out[19:15];
-assign ir_rs2 = ir_out[24:20];
-assign ir_rd = ir_out[11:7];
 assign load_regfile = ctw_WB.load_regfile;
 
 regfile regfile
@@ -102,23 +98,12 @@ regfile regfile
     .rs2_out
 );
 
-logic [2:0] funct3;
-logic [6:0] funct7;
-assign funct3 = ir_out[14:12];
-assign funct7 = ir_out[31:25];
-assign opcode = rv32i_opcode'(ir_out[6:0]);
-
 logic [31:0] selected_rs1_out, selected_rs2_out;
 assign selected_rs1_out = rs1_out_sel ? regfile_in_WB : rs1_out;
 assign selected_rs2_out = rs2_out_sel ? regfile_in_WB : rs2_out;
 
 control_rom control (
-    .opcode,
-    .funct3,
-    .funct7,
-    .ir_rs1,
-    .ir_rs2,
-    .ir_rd,
+    .ir(ir_out),
     .ctw,
     .rs1,
     .rs2,

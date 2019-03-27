@@ -14,6 +14,20 @@ typedef enum bit [6:0] {
     op_nop   = 7'b0000000  //no-op
 } rv32i_opcode;
 
+typedef enum bit [1:0] { 
+    cop_0 = 2'b00,
+    cop_1 = 2'b01,
+    cop_2 = 2'b10
+} rv32i_c_opcode;
+
+typedef enum bit [2:0] { 
+    c_funct3_0 = 3'b000,
+    c_funct3_1 = 3'b001,
+    c_funct3_2 = 3'b010,
+    c_funct3_3 = 3'b011,
+    c_funct3_4 = 3'b100
+} c_funct3_t;
+
 typedef enum bit [2:0] {
     beq  = 3'b000,
     bne  = 3'b001,
