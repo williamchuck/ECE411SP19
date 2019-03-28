@@ -270,6 +270,10 @@ always_comb begin
                 end
             endcase
         end
+        sw: begin
+            dmem_byte_enable = 4'hF;
+            dmem_wdata = dmem_wdata_unshifted;
+        end
         default: begin
             dmem_byte_enable = 4'h0;
             dmem_wdata = 32'd0;
