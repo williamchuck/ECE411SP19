@@ -1,7 +1,6 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate -label clk -radix hexadecimal /urchin_tb/dut/cpu/clk
-add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/PC/out
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/dmem_address_untruncated
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/dmem_wdata_unshifted
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/dmem_address
@@ -16,6 +15,11 @@ add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/rd_MEM
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/rd_WB
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/rs1_EX
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/rs2_EX
+add wave -noupdate /urchin_tb/dut/cpu/force_nop
+add wave -noupdate /urchin_tb/dut/cpu/br_en
+add wave -noupdate /urchin_tb/dut/cpu/questionable_counter
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/PC/out
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/last_pc
 add wave -noupdate -label ctw -radix hexadecimal /urchin_tb/dut/cpu/ctw
 add wave -noupdate -label ctwmux_out -radix hexadecimal /urchin_tb/dut/cpu/ctwmux_out
 add wave -noupdate -label ctw_EX -radix hexadecimal /urchin_tb/dut/cpu/ctw_EX
@@ -118,7 +122,7 @@ add wave -noupdate /urchin_tb/dut/cache/arbiter/next_state
 add wave -noupdate /urchin_tb/dut/cache/arbiter/icache_sel
 add wave -noupdate /urchin_tb/dut/cache/arbiter/dcache_sel
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {1510540 ps} 0}
+WaveRestoreCursors {{Cursor 1} {355000 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 424
 configure wave -valuecolwidth 89
@@ -134,4 +138,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ps
 update
-WaveRestoreZoom {0 ps} {5250 ns}
+WaveRestoreZoom {0 ps} {1050 ns}

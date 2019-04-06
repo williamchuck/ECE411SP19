@@ -26,7 +26,6 @@ module cpu_datapath (
 
 logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, pc_out_WB;
 
-// logic imem_read_prev, imem_resp_prev;
 logic imem_permit;
 
 blocking_unit imem_blocking_unit
@@ -38,20 +37,10 @@ blocking_unit imem_blocking_unit
     .permit(imem_permit)
 );
 
-// initial begin
-//     imem_read_prev = 1'b0;
-//     imem_resp_prev = 1'b0;
-// end
-
-// always_ff @( posedge clk ) begin
-//     imem_read_prev <= imem_read;
-//     imem_resp_prev <= imem_resp;
-// end
 
 assign imem_write = 1'b0;
 assign imem_byte_enable = 4'hf;
 assign imem_wdata = 32'h00000000;
-// assign imem_read = fresh | (imem_read_prev & ~imem_resp_prev);
 assign imem_read = imem_permit;
 
 logic [31:0] dmem_wdata_unshifted;
@@ -80,10 +69,14 @@ logic [1:0] rs1_out_EX_sel, rs2_out_EX_sel;
 logic [4:0] rs1, rs2, rd, ir_rs1, ir_rs2, ir_rd;
 logic [4:0] rs1_EX, rs2_EX;
 logic [4:0] rd_EX, rd_MEM, rd_WB;
-rv32i_word ir_out, ir_out_EX, ir_out_MEM, ir_out_WB;
+rv32i_word ir_decoded, ir_out, ir_out_EX, ir_out_MEM, ir_out_WB;
 rv32i_word rs1_out, rs2_out, regfile_in_WB, regfile_in_MEM, alumux1_out, alumux2_out;
 rv32i_word rs1_out_EX, rs2_out_EX, rs2_out_MEM;
 rv32i_opcode opcode;
+
+logic force_nop;
+
+assign ir_out = force_nop ? 32'h00000013 : ir_decoded;
 
 assign ir_rs1 = ir_out[19:15];
 assign ir_rs2 = ir_out[24:20];
@@ -151,6 +144,8 @@ fwu fwu
 );
 
 assign ctwmux_out = stall ? 32'h00000000 : ctw;
+
+assign force_nop = (ctw_EX.opcode == op_br && br_en) | (ctw_MEM.opcode == op_br && br_en_MEM);
 
 /// MARK: - Components in EX stage
 
@@ -377,7 +372,7 @@ register ir
     .clk,
     .load(no_mem & ~stall),
     .in(imem_rdata),
-    .out(ir_out)
+    .out(ir_decoded)
 );
 
 // assign ir_out = imem_rdata;
