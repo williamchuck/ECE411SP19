@@ -72,7 +72,8 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
     .downstream_wdata(l2_icache_wdata),
     .downstream_read(l2_icache_read),
     .downstream_write(l2_icache_write),
-    .downstream_address(l2_icache_address)
+    .downstream_address(l2_icache_address),
+    .downstream_stall(l2_icache_stall)
 );
 
 cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache_core

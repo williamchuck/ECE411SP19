@@ -11,6 +11,7 @@ module urchin (
 logic imem_resp, imem_read, imem_write, dmem_resp, dmem_read, dmem_write;
 logic [3:0] imem_byte_enable, dmem_byte_enable;
 logic [31:0] imem_address, imem_rdata, imem_wdata, dmem_address, dmem_rdata, dmem_wdata;
+logic imem_stall, dmem_stall;
 
 cpu_datapath cpu
 (
@@ -37,6 +38,7 @@ cpu_datapath cpu
 cache_hierarchy cache
 (
     .clk,
+    .imem_stall,
     .imem_read,
     .imem_write,
     .imem_address,
@@ -45,6 +47,7 @@ cache_hierarchy cache
     .imem_resp,
     .imem_rdata,
 
+    .dmem_stall,
     .dmem_read,
     .dmem_write,
     .dmem_address,

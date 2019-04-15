@@ -1,4 +1,4 @@
-module cache_core #(
+module cache_core_pipelined #(
     parameter s_offset = 5,
     parameter s_index  = 3,
     parameter s_tag    = 32 - s_offset - s_index,
@@ -9,9 +9,10 @@ module cache_core #(
     parameter num_ways = 2**s_way
 )
 (
+    // TODO: 1. Dual port
+    // TODO: 2. Forwarding ACT->IDX
     input clk,
-    input upstream_stall,
-    output downstream_stall,
+    input stall,
 
     // Upstream interface
     input logic upstream_read,
@@ -19,6 +20,7 @@ module cache_core #(
     input logic [31:0] upstream_address,
     input logic [s_line-1:0] upstream_wdata,
     output logic upstream_resp,
+    output logic upstream_ready,
     output logic [s_line-1:0] upstream_rdata,
 
     // Downstream interface
@@ -30,40 +32,39 @@ module cache_core #(
     output logic [31:0] downstream_address
 );
 
-logic cache_started;
+logic _resp;
 
 /// MARK: - Logics for INDEX stage
 logic [s_index-1:0] index_IDX;
 logic read, load_cache;
+logic request_IDX;
 
 assign index_IDX = upstream_address[s_offset+s_index-1:s_offset];
+assign request_IDX = upstream_read | upstream_write;
 
 /// MARK: - Logics for ACTION stage
-logic [num_ways-1:0] fw, _fw;
 logic [31:0] address_ACT;
 logic [s_tag-1:0] tag_ACT;
 logic [s_index-1:0] index_ACT;
 logic [num_ways-1:0] way;
-logic dirty_fw, valid_fw;
 logic [num_ways-1:0] equals, dirtys, valids, hits;
 logic [s_tag-1:0] tags [num_ways];
-logic [s_tag-1:0] tag_fw;
 logic [s_tag-1:0] tagwb_ACT;
 logic [s_line-1:0] datas [num_ways];
-logic [s_line-1:0] data_fw;
 logic [s_line-1:0] line_out, line_in;
-logic [num_ways-2:0] lru, new_lru, lru_fw;
+logic [num_ways-2:0] lru, new_lru;
 logic resp, downstream_resp_ACT, hit, dirty, new_dirty;
+logic request_ACT;
 
 assign tag_ACT = address_ACT[31:s_offset+s_index];
 assign index_ACT = address_ACT[s_offset+s_index-1:s_offset];
 
 // `read` indicates exactly when the pipeline moves
 assign resp = downstream_resp_ACT | hit;
-assign pipe = (resp & ~upstream_stall) | ~cache_started;
+assign pipe = (resp & ~stall);
 
 // `load` when pipeline moves, but only if write is required
-assign load_cache = resp & (~hit | write_ACT) & ~upstream_stall;
+assign load_cache = resp & (~hit | write_ACT) & ~stall;
 
 /// MARK: - Logics for WB stage
 logic [s_tag-1:0] tagwb_WB;
@@ -127,22 +128,6 @@ endgenerate
 
 /// MARK: - ACTION stage
 
-logic use_forward;
-
-assign use_forward = (fw & way != 0);
-
-always_comb begin
-    for (int i = 0; i < num_ways; i++) begin
-        if (fw[i]) begin
-            equals[i] = tag_fw == tag_ACT;
-            hits[i] = equals[i] & valid_fw;
-        end else begin
-            equals[i] = tags[i] == tag_ACT;
-            hits[i] = equals[i] & valids[i];
-        end
-    end
-end
-
 assign hit = hits != {num_ways{1'b0}};
 assign line_in = hit ? upstream_wdata : downstream_rdata;
 assign do_wb_ACT = ~hit & dirty & downstream_resp_ACT;
@@ -155,7 +140,7 @@ onehot_mux_1b #(s_way) dirtymux
     .datain(dirtys),
     .dataout(dirtymux_out)
 );
-assign dirty = use_forward ? dirty_fw : dirtymux_out;
+assign dirty = dirtymux_out;
 
 logic linemux_out;
 onehot_mux #(s_way, s_line) linemux
@@ -164,7 +149,7 @@ onehot_mux #(s_way, s_line) linemux
     .datain(datas),
     .dataout(linemux_out)
 );
-assign line_out = use_forward ? data_fw : linemux_out;
+assign line_out = linemux_out;
 
 // Tag for the selected cache line; used for write-back
 logic tagmux_out;
@@ -174,17 +159,25 @@ onehot_mux #(s_way, s_tag) tagmux
     .datain(tags),
     .dataout(tagmux_out)
 );
-assign tagwb_ACT = use_forward ? tag_fw : tagmux_out;
+assign tagwb_ACT = tagmux_out;
 
 lru_manager #(s_way) LRU_manager
 (
-    .lru((fw != 0) ? lru_fw : lru),
+    .lru,
     .hits,
     .way,
     .new_lru
 );
 
 /// MARK: - INDEX/ACTION pipeline register
+
+register #(1) IDX_ACT_request
+(
+    .clk,
+    .load(pipe),
+    .in(request_IDX),
+    .out(request_ACT)
+);
 
 register #(1) IDX_ACT_read
 (
@@ -245,67 +238,12 @@ assign downstream_write = do_wb;
 assign downstream_wdata = line_out_WB;
 assign downstream_resp_ACT = downstream_resp & ~do_wb;
 
-assign upstream_resp = resp;
-assign upstream_rdata = downstream_resp_ACT ? downstream_rdata : line_out;
-
-/// MARK: - initialization signal
-
-register #(1) init_bit
-(
-    .clk,
-    .load(~cache_started),
-    .in(upstream_read | upstream_write),
-    .out(cache_started)
-);
-
-/// MARK: - forwarding
-
-register #(1) fw_dirty_reg
-(
-    .clk,
-    .load(pipe),
-    .in(new_dirty),
-    .out(dirty_fw)
-);
-
-register #(1) fw_valid_reg
-(
-    .clk,
-    .load(pipe),
-    .in(1'b1),
-    .out(valid_fw)
-);
-
-register #(s_tag) fw_tag_reg
-(
-    .clk,
-    .load(pipe),
-    .in(tag_ACT),
-    .out(tag_fw)
-);
-
-register #(s_line) fw_data_reg
-(
-    .clk,
-    .load(pipe),
-    .in(line_in),
-    .out(data_fw)
-);
-
-register #(num_ways) fw_reg
-(
-    .clk,
-    .load(pipe),
-    .in(_fw),
-    .out(fw)
-);
-
-always_comb begin
-    if (index_IDX == index_ACT && load_cache) begin
-        _fw = way;
-    end else begin
-        _fw = 0;
-    end
+always_ff @( posedge clk ) begin
+    _resp <= resp;
 end
+
+assign upstream_resp = upstream_ready | !request_IDX;
+assign upstream_ready = resp & _resp;
+assign upstream_rdata = downstream_resp_ACT ? downstream_rdata : line_out;
 
 endmodule

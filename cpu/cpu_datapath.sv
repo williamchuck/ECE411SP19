@@ -11,6 +11,7 @@ module cpu_datapath (
     output logic [31:0] imem_address,
     output logic [3:0] imem_byte_enable,
     output logic [31:0] imem_wdata,
+    output logic imem_stall,
 
     // D_Mem interface
     input logic dmem_resp,
@@ -20,6 +21,7 @@ module cpu_datapath (
     output logic [31:0] dmem_address,
     output logic [3:0] dmem_byte_enable,
     output logic [31:0] dmem_wdata
+    output logic dmem_stall
 );
 
 /// MARK: - Components in IF stage
@@ -35,7 +37,7 @@ blocking_unit_abstraction_layer imem_blocking_unit
     .resp(imem_resp),
     .pc(pc_out),
     .permit(imem_permit),
-    .busy(imem_busy),
+    .busy(imem_busy)
 );
 
 // rdata_buffer ir_buffer(
@@ -217,7 +219,7 @@ blocking_unit_abstraction_layer dmem_blocking_unit
     .resp(dmem_resp),
     .pc(pc_out_MEM),
     .permit(dmem_permit),
-    .busy(dmem_busy),
+    .busy(dmem_busy)
 );
 
 // rdata_buffer dmem_buffer(

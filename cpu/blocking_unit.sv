@@ -7,10 +7,10 @@ module blocking_unit_abstraction_layer (
     output logic busy
 );
 
-assign busy = (~resp & select) | (resp & ~_resp);
-
 logic _resp, _select;
 logic [31:0] _pc;
+
+assign busy = (~resp & select) | (resp & ~_resp);
 
 initial begin
     _pc = 32'd0;
