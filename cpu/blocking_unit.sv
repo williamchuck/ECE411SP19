@@ -1,10 +1,13 @@
-module blocking_unit (
+module blocking_unit_abstraction_layer (
     input logic clk,
     input logic select,
     input logic resp,
     input logic [31:0] pc,
-    output logic permit
+    output logic permit,
+    output logic busy
 );
+
+assign busy = (~resp & select) | (resp & ~_resp);
 
 logic _resp, _select;
 logic [31:0] _pc;

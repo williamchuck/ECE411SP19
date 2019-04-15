@@ -7,6 +7,7 @@ module cache_hierarchy #(
 )
 (
     input clk,
+    input imem_stall,
     input imem_read,
     input imem_write,
     input logic [31:0] imem_address,
@@ -15,6 +16,7 @@ module cache_hierarchy #(
     output logic imem_resp,
     output logic [31:0] imem_rdata,
 
+    input dmem_stall,
     input dmem_read,
     input dmem_write,
     input [31:0] dmem_address,
@@ -38,8 +40,6 @@ assign dmem_offset = {dmem_address[s_offset-1:2], 2'd0};
 logic icache_read, dcache_read, dcache_write;
 logic l2_icache_resp, l2_icache_read, l2_icache_write, l2_dcache_resp;
 logic l2_dcache_read, l2_dcache_write, l2_read, l2_write, l2_resp;
-logic icache_hit, dcache_hit, l2_hit;
-logic icache_valid, dcache_valid, l2_valid;
 logic [31:0] imem_rdata_transformer_out, dmem_rdata_transformer_out;
 logic [31:0] l2_icache_address, l2_dcache_address, l2_address;
 logic [255:0] icache_rdata, l2_icache_rdata, l2_icache_wdata;
@@ -60,8 +60,7 @@ register #(256) pmem_rdata_reg
 cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
 (
     .clk,
-    .hit(icache_hit),
-    .valid(icache_valid),
+    .upstream_stall(imem_stall),
     .upstream_read(icache_read),
     .upstream_write(1'b0),
     .upstream_address(imem_address),
@@ -79,8 +78,7 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
 cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache_core
 (
     .clk,
-    .hit(dcache_hit),
-    .valid(dcache_valid),
+    .upstream_stall(dmem_stall),
     .upstream_read(dcache_read),
     .upstream_write(dcache_write),
     .upstream_address(dmem_address),
@@ -98,8 +96,6 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache_core
 cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(3)) l2_cache_core
 (
     .clk,
-    .hit(l2_hit),
-    .valid(l2_valid),
     .upstream_read(l2_read),
     .upstream_write(l2_write),
     .upstream_address(l2_address),
@@ -138,33 +134,6 @@ input_transformer dcache_upstream_wdata_transformer
     .wmask(dmem_byte_enable),
     .dataout(dcache_wdata)
 );
-
-always_ff @(posedge clk) begin
-    if (l2_icache_resp) begin
-        icache_rdata_prev <= icache_rdata_curr;
-    end
-    if (l2_dcache_resp) begin
-        dcache_rdata_prev <= dcache_rdata_curr;
-    end
-end
-
-always_comb begin
-    if (icache_hit & icache_valid) begin
-        icache_rdata = icache_rdata_curr;
-    end else if (l2_icache_resp) begin
-        icache_rdata = icache_rdata_curr;
-    end else begin
-        icache_rdata = icache_rdata_prev;
-    end
-
-    if (dcache_hit & dcache_valid) begin
-        dcache_rdata = dcache_rdata_curr;
-    end else if (l2_dcache_resp) begin
-        dcache_rdata = dcache_rdata_curr;
-    end else begin
-        dcache_rdata = dcache_rdata_prev;
-    end
-end
 
 output_transformer icache_output_transformer
 (

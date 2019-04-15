@@ -23,7 +23,7 @@ logic [6:0] funct7;
 
 assign ir_rs1 = ir[19:15];
 assign ir_rs2 = ir[24:20];
-assign ir_rd = ir[11:7]
+assign ir_rd = ir[11:7];
 assign funct3 = ir[14:12];
 assign funct7 = ir[31:25];
 assign opcode = rv32i_opcode'(ir[6:0]);
@@ -37,10 +37,10 @@ always_comb begin : control_word_generation_logic
     ctw.cmpop = branch_funct3_t'(funct3);
     ctw.dmem_read = 1'd0;
     ctw.dmem_write = 1'd0;
-    ctw.wbmux_sel = 3'd0;
+    ctw.wbmux_sel = alu_out_wb_sel;
     ctw.cmpmux_sel = 1'd0;
-    ctw.alumux1_sel = 1'd0;
-    ctw.alumux2_sel = 3'd0;
+    ctw.alumux1_sel = rs1_EX_sel;
+    ctw.alumux2_sel = i_imm_sel;
     ctw.pcmux_sel = 2'd0;
     ctw.load_regfile = 1'd0;
     ctw.funct3 = funct3;
@@ -53,25 +53,25 @@ always_comb begin : control_word_generation_logic
     case(opcode)
         op_lui: begin
             ctw.load_regfile = 1'd1;
-            ctw.wbmux_sel = 3'd2;
+            ctw.wbmux_sel = u_imm_wb_sel;
             rd = ir_rd;
         end
 
         op_auipc: begin
             ctw.load_regfile = 1'd1;
             ctw.aluop = alu_add;
-            ctw.alumux1_sel = 1'd1;
-            ctw.alumux2_sel = 3'd1;
+            ctw.alumux1_sel = pc_out_sel;
+            ctw.alumux2_sel = u_imm_sel;
             rd = ir_rd;
         end
 
         op_jal: begin
             ctw.load_regfile = 1'd1;
             ctw.pcmux_sel = 2'b01;
-            ctw.alumux1_sel = 1'd1;
-            ctw.alumux2_sel = 3'd4;
+            ctw.alumux1_sel = pc_out_sel;
+            ctw.alumux2_sel = j_imm_sel;
             ctw.aluop = alu_add;
-            ctw.wbmux_sel = 3'd4;
+            ctw.wbmux_sel = pc_inc_wb_sel;
             rd = ir_rd;
         end
 
@@ -79,15 +79,15 @@ always_comb begin : control_word_generation_logic
             ctw.load_regfile = 1'd1;
             ctw.pcmux_sel = 2'b01;
             ctw.aluop = alu_add;
-            ctw.wbmux_sel = 3'd4;
+            ctw.wbmux_sel = pc_inc_wb_sel;
             rs1 = ir_rs1;
             rd = ir_rd;
         end
 
         op_br: begin
             ctw.pcmux_sel = 2'b1X;
-            ctw.alumux1_sel = 1'd1;
-            ctw.alumux2_sel = 3'd2;
+            ctw.alumux1_sel = pc_out_sel;
+            ctw.alumux2_sel = b_imm_sel;
             ctw.aluop = alu_add;
             rs1 = ir_rs1;
             rs2 = ir_rs2;
@@ -97,14 +97,14 @@ always_comb begin : control_word_generation_logic
             ctw.load_regfile = 1'd1;
             ctw.aluop = alu_add;
             ctw.dmem_read = 1'b1;
-            ctw.wbmux_sel = 3'd3;
+            ctw.wbmux_sel = rdata_wb_sel;
             rs1 = ir_rs1;
             rd = ir_rd;
         end
 
         op_store: begin
             ctw.aluop = alu_add;
-            ctw.alumux2_sel = 3'd3;
+            ctw.alumux2_sel = s_imm_sel;
             ctw.dmem_write = 1'b1;
             rs1 = ir_rs1;
             rs2 = ir_rs2;
@@ -116,11 +116,11 @@ always_comb begin : control_word_generation_logic
             rd = ir_rd;
             if(arith_funct3_t'(funct3) == slt) begin
                 ctw.cmpop = blt;
-                ctw.wbmux_sel = 3'd1;
+                ctw.wbmux_sel = br_en_wb_sel;
                 ctw.cmpmux_sel = 1'b1;
             end else if(arith_funct3_t'(funct3) == sltu) begin
                 ctw.cmpop = bltu;
-                ctw.wbmux_sel = 3'd1;
+                ctw.wbmux_sel = br_en_wb_sel;
                 ctw.cmpmux_sel = 1'b1;
             end else if(arith_funct3_t'(funct3) == sr && funct7 == 7'b0100000) begin
                 ctw.aluop = alu_sra;
@@ -134,18 +134,18 @@ always_comb begin : control_word_generation_logic
             rd = ir_rd;
             if(arith_funct3_t'(funct3) == slt) begin
                 ctw.cmpop = blt;
-                ctw.wbmux_sel = 3'd1;
+                ctw.wbmux_sel = br_en_wb_sel;
             end else if(arith_funct3_t'(funct3) == sltu) begin
                 ctw.cmpop = bltu;
-                ctw.wbmux_sel = 3'd1;
+                ctw.wbmux_sel = br_en_wb_sel;
             end else if(arith_funct3_t'(funct3) == sr && funct7 == 7'b0100000) begin
                 ctw.aluop = alu_sra;
-                ctw.alumux2_sel = 3'd5;
+                ctw.alumux2_sel = rs2_EX_sel;
             end else if(arith_funct3_t'(funct3) == add && funct7 == 7'b0100000) begin
                 ctw.aluop = alu_sub;
-                ctw.alumux2_sel = 3'd5;
+                ctw.alumux2_sel = rs2_EX_sel;
             end else begin
-                ctw.alumux2_sel = 3'd5;
+                ctw.alumux2_sel = rs2_EX_sel;
             end
         end
 
@@ -153,7 +153,7 @@ always_comb begin : control_word_generation_logic
 
         default: begin
             // C extension
-            case({c_opcode, c_funct3})
+            case(rv32ic_opcode'({c_opcode, c_funct3}))
                 c_addi4spn: begin
                     ctw.aluop = alu_add;
                 end
@@ -171,45 +171,34 @@ always_comb begin : control_word_generation_logic
                 end
 
                 c_li: begin
-                    
                 end
 
-                c_lui: begin
-                    // Complicated
+                c_lui_addi16sp: begin
                 end
 
-                c_alu: begin
-                    
+                c_misc_alu: begin
                 end
 
                 c_j: begin
-                    
                 end
 
                 c_beqz: begin
-                    
                 end
 
                 c_bnez: begin
-                    
                 end
 
                 c_slli: begin
-                    
                 end
 
                 c_lwsp: begin
-                    
                 end
 
-                c_jrmvadd: begin
-                    
+                c_jalr_mv_add: begin
                 end
 
                 c_swsp: begin
-                    
                 end
-                default: ;
             endcase
         end
     endcase

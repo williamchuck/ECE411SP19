@@ -1,4 +1,4 @@
-module cache_core #(
+module cache_datapath_core #(
     parameter s_offset = 5,
     parameter s_index  = 3,
     parameter s_tag    = 32 - s_offset - s_index,
@@ -9,9 +9,10 @@ module cache_core #(
     parameter num_ways = 2**s_way
 )
 (
+    // TODO: 1. Dual port
+    // TODO: 2. Forwarding ACT->IDX
     input clk,
-    input upstream_stall,
-    output downstream_stall,
+    input stall,
 
     // Upstream interface
     input logic upstream_read,
@@ -60,10 +61,10 @@ assign index_ACT = address_ACT[s_offset+s_index-1:s_offset];
 
 // `read` indicates exactly when the pipeline moves
 assign resp = downstream_resp_ACT | hit;
-assign pipe = (resp & ~upstream_stall) | ~cache_started;
+assign pipe = (resp & ~stall) | ~cache_started;
 
 // `load` when pipeline moves, but only if write is required
-assign load_cache = resp & (~hit | write_ACT) & ~upstream_stall;
+assign load_cache = resp & (~hit | write_ACT) & ~stall;
 
 /// MARK: - Logics for WB stage
 logic [s_tag-1:0] tagwb_WB;
@@ -127,9 +128,7 @@ endgenerate
 
 /// MARK: - ACTION stage
 
-logic use_forward;
-
-assign use_forward = (fw & way != 0);
+logic use_forward = (fw & way != 0);
 
 always_comb begin
     for (int i = 0; i < num_ways; i++) begin

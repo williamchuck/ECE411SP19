@@ -14,19 +14,71 @@ typedef enum bit [6:0] {
     op_nop   = 7'b0000000  //no-op
 } rv32i_opcode;
 
-typedef enum bit [1:0] { 
-    cop_0 = 2'b00,
-    cop_1 = 2'b01,
-    cop_2 = 2'b10
-} rv32i_c_opcode;
+typedef enum bit [1:0] {
+    cop2_0 = 2'd0,
+    cop2_1 = 2'd1,
+    cop2_2 = 2'd2
+} c_op2;
 
-typedef enum bit [2:0] { 
-    c_funct3_0 = 3'b000,
-    c_funct3_1 = 3'b001,
-    c_funct3_2 = 3'b010,
-    c_funct3_3 = 3'b011,
-    c_funct3_4 = 3'b100
+typedef enum bit [2:0] {
+    cop3_0 = 3'd0,
+    cop3_1 = 3'd1,
+    cop3_2 = 3'd2,
+    cop3_3 = 3'd3,
+    cop3_4 = 3'd4,
+    cop3_5 = 3'd5,
+    cop3_6 = 3'd6,
+    cop3_7 = 3'd7
 } c_funct3_t;
+
+typedef enum bit [4:0] {
+    c_addi4spn = {cop2_0, cop3_0},
+    c_fld = {cop2_0, cop3_1}, //not supported
+    c_lw = {cop2_0, cop3_2},
+    c_flw = {cop2_0, cop3_3}, //not supported
+    c_reserved = {cop2_0, cop3_4}, //not supported
+    c_fsd = {cop2_0, cop3_5}, //not supported
+    c_sw = {cop2_0, cop3_6},
+    c_fsw = {cop2_0, cop3_7}, //not supported
+    c_addi = {cop2_1, cop3_0},
+    c_jal = {cop2_1, cop3_1},
+    c_li = {cop2_1, cop3_2},
+    c_lui_addi16sp = {cop2_1, cop3_3},
+    c_misc_alu = {cop2_1, cop3_4},
+    c_j = {cop2_1, cop3_5},
+    c_beqz = {cop2_1, cop3_6},
+    c_bnez = {cop2_1, cop3_7},
+    c_slli = {cop2_2, cop3_0},
+    c_fldsp = {cop2_2, cop3_1}, //not supported
+    c_lwsp = {cop2_2, cop3_2},
+    c_flwsp = {cop2_2, cop3_3}, //not supported
+    c_jalr_mv_add = {cop2_2, cop3_4},
+    c_fsdsp =  {cop2_2, cop3_5}, //not supported
+    c_swsp =  {cop2_2, cop3_6},
+    c_fswsp = {cop2_2, cop3_7} //not supported
+} rv32ic_opcode;
+
+typedef enum bit {
+    rs1_EX_sel = 1'd0,
+    pc_out_sel = 1'd1
+} alumux1_sel_t;
+
+typedef enum bit [2:0] {
+    i_imm_sel = 3'd0,
+    u_imm_sel = 3'd1,
+    b_imm_sel = 3'd2,
+    s_imm_sel = 3'd3,
+    j_imm_sel = 3'd4,
+    rs2_EX_sel = 3'd5
+} alumux2_sel_t;
+
+typedef enum bit [2:0] {
+    alu_out_wb_sel = 3'd0,
+    br_en_wb_sel = 3'd1,
+    u_imm_wb_sel = 3'd2,
+    rdata_wb_sel = 3'd3,
+    pc_inc_wb_sel = 3'd4
+} wb_sel_t;
 
 typedef enum bit [2:0] {
     beq  = 3'b000,
@@ -82,9 +134,9 @@ typedef struct packed {
     logic dmem_write;
     logic cmpmux_sel;
     logic [1:0] pcmux_sel;
-    logic alumux1_sel;
-    logic [2:0] wbmux_sel;
-    logic [2:0] alumux2_sel;
+    alumux1_sel_t alumux1_sel;
+    wb_sel_t wbmux_sel;
+    alumux2_sel_t alumux2_sel;
     logic [2:0] funct3;
     logic [6:0] funct7;
 } rv32i_control_word;

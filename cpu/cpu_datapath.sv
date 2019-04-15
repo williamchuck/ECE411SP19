@@ -26,27 +26,25 @@ module cpu_datapath (
 
 logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, pc_out_WB;
 
-// logic imem_read_prev, imem_resp_prev;
-logic imem_permit;
+logic imem_permit, imem_busy;
 
-blocking_unit imem_blocking_unit
+blocking_unit_abstraction_layer imem_blocking_unit
 (
     .clk,
     .select(imem_read),
     .resp(imem_resp),
     .pc(pc_out),
-    .permit(imem_permit)
+    .permit(imem_permit),
+    .busy(imem_busy),
 );
 
-// initial begin
-//     imem_read_prev = 1'b0;
-//     imem_resp_prev = 1'b0;
-// end
-
-// always_ff @( posedge clk ) begin
-//     imem_read_prev <= imem_read;
-//     imem_resp_prev <= imem_resp;
-// end
+// rdata_buffer ir_buffer(
+//     .clk,
+//     .resp(imem_resp),
+//     .busy(blocking_unit_busy),
+//     .rdata(imem_rdata),
+//     .rdata_synchronized(ir_out)
+// );
 
 assign imem_write = 1'b0;
 assign imem_byte_enable = 4'hf;
@@ -55,7 +53,7 @@ assign imem_wdata = 32'h00000000;
 assign imem_read = imem_permit;
 
 logic [31:0] dmem_wdata_unshifted;
-logic stall, no_mem;
+logic data_hazard_stall, blocking_unit_busy;
 logic pcmux_sel, br_en, br_en_MEM, br_en_WB;
 logic [31:0] cmpmux_out, alu_out, alu_out_WB, alu_out_MEM;
 logic [31:0] dmem_rdata_WB;
@@ -65,7 +63,7 @@ assign imem_address = pc_out;
 pc_register PC
 (
     .clk,
-    .load(no_mem & ~stall),
+    .load(~blocking_unit_busy & ~data_hazard_stall),
     .in(pcmux_out),
     .out(pc_out)
 );
@@ -116,7 +114,7 @@ hdu hdu
     .rs1,
     .rs2,
     .rd_EX,
-    .stall
+    .stall(data_hazard_stall)
 );
 
 fwu fwu
@@ -135,7 +133,7 @@ fwu fwu
     .rs2_out_EX_sel
 );
 
-assign ctwmux_out = stall ? 32'h00000000 : ctw;
+assign ctwmux_out = data_hazard_stall ? 32'h00000000 : ctw;
 
 /// MARK: - Components in EX stage
 
@@ -174,18 +172,18 @@ assign j_imm = {{12{ir_out_EX[31]}}, ir_out_EX[19:12], ir_out_EX[20], ir_out_EX[
 
 always_comb begin : alumux1_2_selection
     case(ctw_EX.alumux1_sel)
-        1'd0: alumux1_out = selected_rs1_EX_out;
-        1'd1: alumux1_out = pc_out_EX;
+        rs1_EX_sel: alumux1_out = selected_rs1_EX_out;
+        pc_out_sel: alumux1_out = pc_out_EX;
         default: alumux1_out = 32'dX;
     endcase
 
     case(ctw_EX.alumux2_sel)
-        3'd0: alumux2_out = i_imm;
-        3'd1: alumux2_out = u_imm;
-        3'd2: alumux2_out = b_imm;
-        3'd3: alumux2_out = s_imm;
-        3'd4: alumux2_out = j_imm;
-        3'd5: alumux2_out = selected_rs2_EX_out;
+        i_imm_sel: alumux2_out = i_imm;
+        u_imm_sel: alumux2_out = u_imm;
+        b_imm_sel: alumux2_out = b_imm;
+        s_imm_sel: alumux2_out = s_imm;
+        j_imm_sel: alumux2_out = j_imm;
+        rs2_EX_sel: alumux2_out = selected_rs2_EX_out;
         default: alumux2_out = 32'dX;
     endcase
 end
@@ -210,16 +208,25 @@ compare cmp
 
 /// MARK: - Components in MEM stage
 logic [31:0] dmem_address_untruncated;
-logic dmem_permit;
+logic dmem_permit, dmem_busy;
 
-blocking_unit dmem_blocking_unit
+blocking_unit_abstraction_layer dmem_blocking_unit
 (
     .clk,
     .select(ctw_MEM.dmem_read | ctw_MEM.dmem_write),
     .resp(dmem_resp),
     .pc(pc_out_MEM),
-    .permit(dmem_permit)
+    .permit(dmem_permit),
+    .busy(dmem_busy),
 );
+
+// rdata_buffer dmem_buffer(
+//     .clk,
+//     .resp(dmem_resp),
+//     .busy(blocking_unit_busy),
+//     .rdata(dmem_rdata),
+//     .rdata_synchronized(dmem_rdata_WB)
+// );
 
 assign rd_MEM = ir_out_MEM[11:7];
 assign dmem_read = ctw_MEM.dmem_read & dmem_permit;
@@ -328,12 +335,11 @@ end
 
 always_comb begin
     case(ctw_MEM.wbmux_sel)
-        3'd0: regfile_in_MEM = alu_out_MEM;
-        3'd1: regfile_in_MEM = {31'b0, br_en_MEM};
-        3'd2: regfile_in_MEM = u_imm;
-        // 3'd3: regfile_in_MEM = dmem_rdata_shifted;
-        3'd3: regfile_in_MEM = 32'd0;
-        3'd4: regfile_in_MEM = pc_out_MEM + 4;
+        alu_out_wb_sel: regfile_in_MEM = alu_out_MEM;
+        br_en_wb_sel: regfile_in_MEM = {31'b0, br_en_MEM};
+        u_imm_wb_sel: regfile_in_MEM = u_imm;
+        rdata_wb_sel: regfile_in_MEM = 32'd0;
+        pc_inc_wb_sel: regfile_in_MEM = pc_out_MEM + 4;
         default: regfile_in_MEM = 32'bX;
     endcase
 end
@@ -344,33 +350,23 @@ assign rd_WB = ir_out_WB[11:7];
 
 always_comb begin
     case(ctw_WB.wbmux_sel)
-        3'd0: regfile_in_WB = alu_out_WB;
-        3'd1: regfile_in_WB = {31'b0, br_en_WB};
-        3'd2: regfile_in_WB = u_imm;
-        3'd3: regfile_in_WB = dmem_rdata_WB;
-        3'd4: regfile_in_WB = pc_out_WB + 4;
+        alu_out_wb_sel: regfile_in_WB = alu_out_WB;
+        br_en_wb_sel: regfile_in_WB = {31'b0, br_en_WB};
+        u_imm_wb_sel: regfile_in_WB = u_imm;
+        rdata_wb_sel: regfile_in_WB = dmem_rdata_WB;
+        pc_inc_wb_sel: regfile_in_WB = pc_out_WB + 4;
         default: regfile_in_WB = 32'bX;
     endcase
 end
 
 /// MARK: - IF/ID pipeline register
 
-assign no_mem = (imem_resp | ~imem_read) & (dmem_resp | (~dmem_write & ~dmem_read));
-
-register ir
-(
-    .clk,
-    .load(no_mem & ~stall),
-    .in(imem_rdata),
-    .out(ir_out)
-);
-
-// assign ir_out = imem_rdata;
+assign blocking_unit_busy = imem_busy | dmem_busy;
 
 register IF_ID_pc
 (
-    .*,
-    .load(no_mem & ~stall),
+    .clk,
+    .load(~blocking_unit_busy & ~data_hazard_stall),
     .in(pc_out),
     .out(pc_out_ID)
 );
@@ -380,39 +376,39 @@ register IF_ID_pc
 register ID_EX_ir
 (
     .clk,
-    .load(no_mem),
+    .load(~blocking_unit_busy),
     .in(ir_out),
     .out(ir_out_EX)
 );
 
 register #($bits(rv32i_control_word)) ID_EX_ctw
 (
-    .*,
-    .load(no_mem),
+    .clk,
+    .load(~blocking_unit_busy),
     .in(ctwmux_out),
     .out(ctw_EX)
 );
 
 register ID_EX_pc
 (
-    .*,
-    .load(no_mem),
+    .clk,
+    .load(~blocking_unit_busy),
     .in(pc_out_ID),
     .out(pc_out_EX)
 );
 
 register ID_EX_rs1_out
 (
-    .*,
-    .load(no_mem),
+    .clk,
+    .load(~blocking_unit_busy),
     .in(selected_rs1_out),
     .out(rs1_out_EX)
 );
 
 register ID_EX_rs2_out
 (
-    .*,
-    .load(no_mem),
+    .clk,
+    .load(~blocking_unit_busy),
     .in(selected_rs2_out),
     .out(rs2_out_EX)
 );
@@ -422,7 +418,7 @@ register ID_EX_rs2_out
 register #($bits(rv32i_control_word)) EX_MEM_ctw
 (
     .clk,
-    .load(no_mem),
+    .load(~blocking_unit_busy),
     .in(ctw_EX),
     .out(ctw_MEM)
 );
@@ -430,7 +426,7 @@ register #($bits(rv32i_control_word)) EX_MEM_ctw
 register EX_MEM_rs2_out
 (
     .clk,
-    .load(no_mem),
+    .load(~blocking_unit_busy),
     .in(selected_rs2_EX_out),
     .out(rs2_out_MEM)
 );
@@ -438,7 +434,7 @@ register EX_MEM_rs2_out
 register EX_MEM_alu_out
 (
     .clk,
-    .load(no_mem),
+    .load(~blocking_unit_busy),
     .in(alu_out),
     .out(alu_out_MEM)
 );
@@ -446,7 +442,7 @@ register EX_MEM_alu_out
 register EX_MEM_pc
 (
     .clk,
-    .load(no_mem),
+    .load(~blocking_unit_busy),
     .in(pc_out_EX),
     .out(pc_out_MEM)
 );
@@ -454,7 +450,7 @@ register EX_MEM_pc
 register EX_MEM_ir
 (
     .clk,
-    .load(no_mem),
+    .load(~blocking_unit_busy),
     .in(ir_out_EX),
     .out(ir_out_MEM)
 );
@@ -462,7 +458,7 @@ register EX_MEM_ir
 register #(1) EX_MEM_br_en
 (
     .clk,
-    .load(no_mem),
+    .load(~blocking_unit_busy),
     .in(br_en),
     .out(br_en_MEM)
 );
@@ -471,24 +467,24 @@ register #(1) EX_MEM_br_en
 
 register #($bits(rv32i_control_word)) MEM_WB_ctw
 (
-    .*,
-    .load(no_mem),
+    .clk,
+    .load(~blocking_unit_busy),
     .in(ctw_MEM),
     .out(ctw_WB)
 );
 
 register MEM_WB_alu_out
 (
-    .*,
-    .load(no_mem),
+    .clk,
+    .load(~blocking_unit_busy),
     .in(alu_out_MEM),
     .out(alu_out_WB)
 );
 
 register MEM_WB_dmem_rdata
 (
-    .*,
-    .load(no_mem),
+    .clk,
+    .load(~blocking_unit_busy),
     .in(dmem_rdata_shifted),
     .out(dmem_rdata_WB)
 );
@@ -498,7 +494,7 @@ register MEM_WB_dmem_rdata
 register MEM_WB_pc
 (
     .clk,
-    .load(no_mem),
+    .load(~blocking_unit_busy),
     .in(pc_out_MEM),
     .out(pc_out_WB)
 );
@@ -506,7 +502,7 @@ register MEM_WB_pc
 register MEM_WB_ir
 (
     .clk,
-    .load(no_mem),
+    .load(~blocking_unit_busy),
     .in(ir_out_MEM),
     .out(ir_out_WB)
 );
@@ -514,7 +510,7 @@ register MEM_WB_ir
 register #(1) MEM_WB_br_en
 (
     .clk,
-    .load(no_mem),
+    .load(~blocking_unit_busy),
     .in(br_en_MEM),
     .out(br_en_WB)
 );

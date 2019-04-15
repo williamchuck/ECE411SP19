@@ -9,5 +9,5 @@ module hdu (
 );
 
 assign stall = dmem_read_EX && (rs1 == rd_EX || rs2 == rd_EX);
-    
+
 endmodule

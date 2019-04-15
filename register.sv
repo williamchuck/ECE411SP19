@@ -30,3 +30,40 @@ begin
 end
 
 endmodule : register
+
+module restorable_register #(parameter width = 32)
+(
+    input clk,
+    input load,
+    input [width-1:0] in,
+    input restore,
+    output logic [width-1:0] out
+);
+
+logic [width-1:0] data, backup;
+
+/* Altera device registers are 0 at power on. Specify this
+ * so that Modelsim works as expected.
+ */
+initial
+begin
+    data = 1'b0;
+    backup = 1'b0;
+end
+
+always_ff @(posedge clk)
+begin
+    if (restore) begin
+        data <= backup;
+    end else if (load) begin
+        data <= in;
+        backup <= data;
+    end
+end
+
+always_comb
+begin
+    out = data;
+end
+
+endmodule : restorable_register

@@ -94,7 +94,8 @@ lru_manager #(s_way) LRUM
 array #(.s_index(s_index), .width(num_ways-1)) lru_store
 (
     .clk,
-    .index,
+    .rindex(index),
+    .windex(index),
     .read(cache_read),
     .load(ld_LRU),
     .datain(new_lru),
@@ -109,7 +110,8 @@ for (i = 0; i < num_ways; i++) begin : forloop
     array valid_array
     (
         .clk,
-        .index,
+        .rindex(index),
+        .windex(index),
         .read(cache_read),
         .load(cache_load_en & way[i]),
         .datain(1'b1),
@@ -119,7 +121,8 @@ for (i = 0; i < num_ways; i++) begin : forloop
     array dirty_array
     (
         .clk,
-        .index,
+        .rindex(index),
+        .windex(index),
         .read(cache_read),
         .load(cache_load_en & way[i]),
         .datain(new_dirty),
@@ -129,7 +132,8 @@ for (i = 0; i < num_ways; i++) begin : forloop
     array #(.s_index(s_index), .width(s_tag)) tag_array
     (
         .clk,
-        .index,
+        .rindex(index),
+        .windex(index),
         .read(cache_read),
         .load(cache_load_en & way[i]),
         .datain(tag),
