@@ -9,7 +9,7 @@ module cache_datapath_core #(
     parameter num_ways = 2**s_way
 )
 (
-    input clk,
+    input logic clk,
 
     // Datapath-Control interface
     input logic cache_read,

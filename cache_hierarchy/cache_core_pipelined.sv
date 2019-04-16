@@ -32,8 +32,6 @@ module cache_core_pipelined #(
     output logic [31:0] downstream_address
 );
 
-logic _resp;
-
 /// MARK: - Logics for INDEX stage
 logic [s_index-1:0] index_IDX;
 logic read, load_cache;
@@ -238,12 +236,8 @@ assign downstream_write = do_wb;
 assign downstream_wdata = line_out_WB;
 assign downstream_resp_ACT = downstream_resp & ~do_wb;
 
-always_ff @( posedge clk ) begin
-    _resp <= resp;
-end
-
 assign upstream_resp = upstream_ready | !request_IDX;
-assign upstream_ready = resp & _resp;
+assign upstream_ready = resp;
 assign upstream_rdata = downstream_resp_ACT ? downstream_rdata : line_out;
 
 endmodule

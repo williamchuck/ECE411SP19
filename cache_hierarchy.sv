@@ -15,6 +15,7 @@ module cache_hierarchy #(
     input logic [31:0] imem_wdata,
     output logic imem_resp,
     output logic [31:0] imem_rdata,
+    output logic imem_ready,
 
     input dmem_stall,
     input dmem_read,
@@ -24,6 +25,7 @@ module cache_hierarchy #(
     input [31:0] dmem_wdata,
     output logic [31:0] dmem_rdata,
     output logic dmem_resp,
+    output logic dmem_ready,
 
     input pmem_resp,
     input logic [255:0] pmem_rdata,
@@ -43,8 +45,6 @@ logic l2_dcache_read, l2_dcache_write, l2_read, l2_write, l2_resp;
 logic [31:0] imem_rdata_transformer_out, dmem_rdata_transformer_out;
 logic [31:0] l2_icache_address, l2_dcache_address, l2_address;
 logic [255:0] icache_rdata, l2_icache_rdata, l2_icache_wdata;
-logic [255:0] icache_rdata_curr, icache_rdata_prev;
-logic [255:0] dcache_rdata_curr, dcache_rdata_prev;
 logic [255:0] l2_dcache_wdata, dcache_wdata, dcache_rdata;
 logic [255:0] dcache_downstream_rdata_transformed, l2_wdata, l2_rdata, l2_dcache_rdata;
 logic [255:0] pmem_rdata_reg_out;
@@ -57,35 +57,38 @@ register #(256) pmem_rdata_reg
     .out(pmem_rdata_reg_out)
 );
 
-cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
+cache_core_pipelined #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache_core
 (
     .clk,
-    .upstream_stall(imem_stall),
+    .stall(imem_stall),
     .upstream_read(icache_read),
     .upstream_write(1'b0),
     .upstream_address(imem_address),
     .upstream_wdata({s_line{1'b0}}),
-    .upstream_rdata(icache_rdata_curr),
+    .upstream_rdata(icache_rdata),
     .upstream_resp(imem_resp),
+    .upstream_ready(imem_ready),
+
     .downstream_resp(l2_icache_resp),
     .downstream_rdata(l2_icache_rdata),
     .downstream_wdata(l2_icache_wdata),
     .downstream_read(l2_icache_read),
     .downstream_write(l2_icache_write),
-    .downstream_address(l2_icache_address),
-    .downstream_stall(l2_icache_stall)
+    .downstream_address(l2_icache_address)
 );
 
-cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache_core
+cache_core_pipelined #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache_core
 (
     .clk,
-    .upstream_stall(dmem_stall),
+    .stall(dmem_stall),
     .upstream_read(dcache_read),
     .upstream_write(dcache_write),
     .upstream_address(dmem_address),
     .upstream_wdata(dcache_wdata),
-    .upstream_rdata(dcache_rdata_curr),
+    .upstream_rdata(dcache_rdata),
     .upstream_resp(dmem_resp),
+    .upstream_ready(dmem_ready),
+
     .downstream_resp(l2_dcache_resp),
     .downstream_rdata(dcache_downstream_rdata_transformed),
     .downstream_wdata(l2_dcache_wdata),

@@ -20,15 +20,27 @@ module cpu_datapath (
     output logic dmem_write,
     output logic [31:0] dmem_address,
     output logic [3:0] dmem_byte_enable,
-    output logic [31:0] dmem_wdata
+    output logic [31:0] dmem_wdata,
     output logic dmem_stall
 );
 
-/// MARK: - Components in IF stage
-
 logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, pc_out_WB;
-
 logic imem_permit, imem_busy;
+logic dmem_permit, dmem_busy;
+
+logic load_regfile;
+logic rs1_out_sel, rs2_out_sel;
+logic [1:0] rs1_out_EX_sel, rs2_out_EX_sel;
+logic [4:0] rs1, rs2, rd;
+logic [4:0] rs1_EX, rs2_EX;
+logic [4:0] rd_EX, rd_MEM, rd_WB;
+rv32i_word ir_out, ir_out_EX, ir_out_MEM, ir_out_WB;
+rv32i_word rs1_out, rs2_out, regfile_in_WB, regfile_in_MEM, alumux1_out, alumux2_out;
+rv32i_word rs1_out_EX, rs2_out_EX, rs2_out_MEM;
+
+assign blocking_unit_busy = imem_busy | dmem_busy;
+
+/// MARK: - Components in IF stage
 
 blocking_unit_abstraction_layer imem_blocking_unit
 (
@@ -40,18 +52,9 @@ blocking_unit_abstraction_layer imem_blocking_unit
     .busy(imem_busy)
 );
 
-// rdata_buffer ir_buffer(
-//     .clk,
-//     .resp(imem_resp),
-//     .busy(blocking_unit_busy),
-//     .rdata(imem_rdata),
-//     .rdata_synchronized(ir_out)
-// );
-
 assign imem_write = 1'b0;
 assign imem_byte_enable = 4'hf;
 assign imem_wdata = 32'h00000000;
-// assign imem_read = fresh | (imem_read_prev & ~imem_resp_prev);
 assign imem_read = imem_permit;
 
 logic [31:0] dmem_wdata_unshifted;
@@ -73,16 +76,6 @@ pc_register PC
 assign pcmux_out = pcmux_sel ? alu_out : pc_out + 32'd4;
 
 /// MARK: - Components in ID stage
-
-logic load_regfile;
-logic rs1_out_sel, rs2_out_sel;
-logic [1:0] rs1_out_EX_sel, rs2_out_EX_sel;
-logic [4:0] rs1, rs2, rd;
-logic [4:0] rs1_EX, rs2_EX;
-logic [4:0] rd_EX, rd_MEM, rd_WB;
-rv32i_word ir_out, ir_out_EX, ir_out_MEM, ir_out_WB;
-rv32i_word rs1_out, rs2_out, regfile_in_WB, regfile_in_MEM, alumux1_out, alumux2_out;
-rv32i_word rs1_out_EX, rs2_out_EX, rs2_out_MEM;
 
 assign load_regfile = ctw_WB.load_regfile;
 
@@ -210,7 +203,6 @@ compare cmp
 
 /// MARK: - Components in MEM stage
 logic [31:0] dmem_address_untruncated;
-logic dmem_permit, dmem_busy;
 
 blocking_unit_abstraction_layer dmem_blocking_unit
 (
@@ -363,158 +355,42 @@ end
 
 /// MARK: - IF/ID pipeline register
 
-assign blocking_unit_busy = imem_busy | dmem_busy;
-
 register IF_ID_pc
 (
     .clk,
-    .load(~blocking_unit_busy & ~data_hazard_stall),
+    .load(~data_hazard_stall),
     .in(pc_out),
     .out(pc_out_ID)
 );
 
 /// MARK: - ID/EX pipeline register
 
-register ID_EX_ir
+register #(4*32+$bits(rv32i_control_word)) ID_EX_pipeline
 (
     .clk,
-    .load(~blocking_unit_busy),
-    .in(ir_out),
-    .out(ir_out_EX)
-);
-
-register #($bits(rv32i_control_word)) ID_EX_ctw
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(ctwmux_out),
-    .out(ctw_EX)
-);
-
-register ID_EX_pc
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(pc_out_ID),
-    .out(pc_out_EX)
-);
-
-register ID_EX_rs1_out
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(selected_rs1_out),
-    .out(rs1_out_EX)
-);
-
-register ID_EX_rs2_out
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(selected_rs2_out),
-    .out(rs2_out_EX)
+    .load(1'b1),
+    .in({ir_out, ctwmux_out, pc_out_ID, selected_rs1_out, selected_rs2_out}),
+    .out({ir_out_EX, ctw_EX, pc_out_EX, rs1_out_EX, rs2_out_EX})
 );
 
 /// MARK: - EX/MEM pipeline register
 
-register #($bits(rv32i_control_word)) EX_MEM_ctw
+register #($bits(rv32i_control_word)+4*32+1) EX_MEM_pipeline
 (
     .clk,
-    .load(~blocking_unit_busy),
-    .in(ctw_EX),
-    .out(ctw_MEM)
-);
-
-register EX_MEM_rs2_out
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(selected_rs2_EX_out),
-    .out(rs2_out_MEM)
-);
-
-register EX_MEM_alu_out
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(alu_out),
-    .out(alu_out_MEM)
-);
-
-register EX_MEM_pc
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(pc_out_EX),
-    .out(pc_out_MEM)
-);
-
-register EX_MEM_ir
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(ir_out_EX),
-    .out(ir_out_MEM)
-);
-
-register #(1) EX_MEM_br_en
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(br_en),
-    .out(br_en_MEM)
+    .load(dmem_resp),
+    .in({ctw_EX, selected_rs2_EX_out, alu_out, pc_out_EX, ir_out_EX, br_en}),
+    .out({ctw_MEM, rs2_out_MEM, alu_out_MEM, pc_out_MEM, ir_out_MEM, br_en_MEM})
 );
 
 /// MARK: - MEM/WB pipeline register
 
-register #($bits(rv32i_control_word)) MEM_WB_ctw
+register #($bits(rv32i_control_word)+32*4+1) MEM_WB_pipeline
 (
     .clk,
-    .load(~blocking_unit_busy),
-    .in(ctw_MEM),
-    .out(ctw_WB)
-);
-
-register MEM_WB_alu_out
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(alu_out_MEM),
-    .out(alu_out_WB)
-);
-
-register MEM_WB_dmem_rdata
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(dmem_rdata_shifted),
-    .out(dmem_rdata_WB)
-);
-
-// assign dmem_rdata_WB = dmem_rdata_shifted;
-
-register MEM_WB_pc
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(pc_out_MEM),
-    .out(pc_out_WB)
-);
-
-register MEM_WB_ir
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(ir_out_MEM),
-    .out(ir_out_WB)
-);
-
-register #(1) MEM_WB_br_en
-(
-    .clk,
-    .load(~blocking_unit_busy),
-    .in(br_en_MEM),
-    .out(br_en_WB)
+    .load(1'b1),
+    .in({ctw_MEM, alu_out_MEM, dmem_rdata_shifted, pc_out_MEM, ir_out_MEM, br_en_MEM}),
+    .out({ctw_WB, alu_out_WB, dmem_rdata_WB, pc_out_WB, ir_out_WB, br_en_WB})
 );
 
 endmodule

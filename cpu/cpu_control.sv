@@ -199,6 +199,9 @@ always_comb begin : control_word_generation_logic
 
                 c_swsp: begin
                 end
+                
+                default: begin
+                end
             endcase
         end
     endcase
