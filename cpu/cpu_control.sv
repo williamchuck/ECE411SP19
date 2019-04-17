@@ -3,6 +3,7 @@ import rv32i_types::*;
 module control_rom
 (
     input rv32i_word ir,
+    input rv32i_word pc,
     // input rv32i_opcode opcode,
     // input logic [2:0] funct3,
     // input logic [6:0] funct7,
@@ -20,6 +21,7 @@ logic [1:0] c_opcode;
 rv32i_reg ir_rs1, ir_rs2, ir_rd;
 logic [2:0] funct3, c_funct3;
 logic [6:0] funct7;
+logic [31:0] inst_pc;
 
 assign ir_rs1 = ir[19:15];
 assign ir_rs2 = ir[24:20];
@@ -45,6 +47,7 @@ always_comb begin : control_word_generation_logic
     ctw.load_regfile = 1'd0;
     ctw.funct3 = funct3;
     ctw.funct7 = funct7;
+    ctw.pc = pc;
     rs1 = 5'd0;
     rs2 = 5'd0;
     rd = 5'd0;

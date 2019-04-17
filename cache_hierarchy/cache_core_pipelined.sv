@@ -34,13 +34,14 @@ module cache_core_pipelined #(
 
 /// MARK: - Logics for INDEX stage
 logic [s_index-1:0] index_IDX;
-logic read, load_cache;
+logic read, load_cache, pipe;
 logic request_IDX;
 
 assign index_IDX = upstream_address[s_offset+s_index-1:s_offset];
 assign request_IDX = upstream_read | upstream_write;
 
 /// MARK: - Logics for ACTION stage
+logic [s_index-1:0] index_WB;
 logic [31:0] address_ACT;
 logic [s_tag-1:0] tag_ACT;
 logic [s_index-1:0] index_ACT;
@@ -51,18 +52,18 @@ logic [s_tag-1:0] tagwb_ACT;
 logic [s_line-1:0] datas [num_ways];
 logic [s_line-1:0] line_out, line_in;
 logic [num_ways-2:0] lru, new_lru;
-logic resp, downstream_resp_ACT, hit, dirty, new_dirty;
-logic request_ACT;
+logic downstream_resp_ACT, hit, dirty, new_dirty;
+logic request_ACT, write_ACT, do_wb_ACT, read_ACT;
 
 assign tag_ACT = address_ACT[31:s_offset+s_index];
 assign index_ACT = address_ACT[s_offset+s_index-1:s_offset];
 
 // `read` indicates exactly when the pipeline moves
-assign resp = downstream_resp_ACT | hit;
-assign pipe = (resp & ~stall);
+assign upstream_ready = downstream_resp_ACT | hit;
+assign pipe = upstream_resp & ~stall;
 
 // `load` when pipeline moves, but only if write is required
-assign load_cache = resp & (~hit | write_ACT) & ~stall;
+assign load_cache = upstream_ready & (~hit | write_ACT) & ~stall;
 
 /// MARK: - Logics for WB stage
 logic [s_tag-1:0] tagwb_WB;
@@ -70,6 +71,17 @@ logic [s_line-1:0] line_out_WB;
 logic do_wb;
 
 /// MARK: - INDEX stage
+
+array #(.s_index(s_index), .width(num_ways-1)) lru_store
+(
+    .clk,
+    .rindex(index_IDX),
+    .windex(index_ACT),
+    .read(pipe),
+    .load(1'd1),
+    .datain(new_lru),
+    .dataout(lru)
+);
 
 genvar i;
 
@@ -119,6 +131,8 @@ for (i = 0; i < num_ways; i++) begin : forloop
         .datain(line_in),
         .dataout(datas[i])
     );
+    assign equals[i] = tags[i] == tag_ACT;
+    assign hits[i] = equals[i] & valids[i];
 end
 
 end
@@ -140,7 +154,7 @@ onehot_mux_1b #(s_way) dirtymux
 );
 assign dirty = dirtymux_out;
 
-logic linemux_out;
+logic [255:0] linemux_out;
 onehot_mux #(s_way, s_line) linemux
 (
     .sel(way),
@@ -150,7 +164,7 @@ onehot_mux #(s_way, s_line) linemux
 assign line_out = linemux_out;
 
 // Tag for the selected cache line; used for write-back
-logic tagmux_out;
+logic [23:0] tagmux_out;
 onehot_mux #(s_way, s_tag) tagmux
 (
     .sel(way),
@@ -182,7 +196,15 @@ register #(1) IDX_ACT_read
     .clk,
     .load(pipe),
     .in(upstream_read),
-    .out(read_ACT),
+    .out(read_ACT)
+);
+
+register IDX_ACT_address
+(
+    .clk,
+    .load(pipe),
+    .in(upstream_address),
+    .out(address_ACT)
 );
 
 register #(1) IDX_ACT_write
@@ -236,8 +258,7 @@ assign downstream_write = do_wb;
 assign downstream_wdata = line_out_WB;
 assign downstream_resp_ACT = downstream_resp & ~do_wb;
 
-assign upstream_resp = upstream_ready | !request_IDX;
-assign upstream_ready = resp;
+assign upstream_resp = upstream_ready | !request_ACT;
 assign upstream_rdata = downstream_resp_ACT ? downstream_rdata : line_out;
 
 endmodule

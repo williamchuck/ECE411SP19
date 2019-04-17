@@ -139,6 +139,7 @@ typedef struct packed {
     alumux2_sel_t alumux2_sel;
     logic [2:0] funct3;
     logic [6:0] funct7;
+    logic [31:0] pc;
 } rv32i_control_word;
 
 typedef logic [31:0] rv32i_word;

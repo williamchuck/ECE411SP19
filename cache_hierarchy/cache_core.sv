@@ -9,8 +9,8 @@ module cache_core #(
 )
 (
     input clk,
-    output hit,
-    output valid,
+    // output hit,
+    // output valid,
 
     input upstream_read,
     input upstream_write,
@@ -26,7 +26,7 @@ module cache_core #(
     output logic downstream_read,
     output logic downstream_write
 );
-
+logic hit, valid; //Copied from output signals
 logic dirty, cache_read, cache_load_en;
 logic downstream_address_sel, ld_wb, ld_LRU, new_dirty;
 
