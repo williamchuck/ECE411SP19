@@ -35,14 +35,23 @@ module cache_hierarchy #(
     output logic pmem_write
 );
 
+logic dpipe, ipipe;
+assign dpipe = dmem_resp & ~dmem_stall;
+assign ipipe = imem_resp & ~imem_stall;
+
 logic [s_offset-1:0] imem_offset, dmem_offset;
 assign imem_offset = {imem_address[s_offset-1:2], 2'd0};
 assign dmem_offset = {dmem_address[s_offset-1:2], 2'd0};
+logic [s_offset-1:0] imem_offset_ACT, dmem_offset_ACT;
+
+logic [3:0] dmem_byte_enable_ACT;
+
+logic dmem_write_ACT;
 
 logic icache_read, dcache_read, dcache_write;
 logic l2_icache_resp, l2_icache_read, l2_icache_write, l2_dcache_resp;
 logic l2_dcache_read, l2_dcache_write, l2_read, l2_write, l2_resp;
-logic [31:0] imem_rdata_transformer_out, dmem_rdata_transformer_out;
+logic [31:0] imem_rdata_transformer_out, dmem_rdata_transformer_out, dmem_wdata_ACT;
 logic [31:0] l2_icache_address, l2_dcache_address, l2_address;
 logic [255:0] icache_rdata, l2_icache_rdata, l2_icache_wdata;
 logic [255:0] l2_dcache_wdata, dcache_wdata, dcache_rdata;
@@ -119,38 +128,54 @@ cache_arbiter arbiter
     .*
 );
 
+register #(s_offset) imem_pipeline_reg
+(
+    .clk,
+    .load(ipipe),
+    .in({imem_offset}),
+    .out({imem_offset_ACT})
+);
+
+register #(s_offset+1+4+32) dmem_pipeline_reg
+(
+    .clk,
+    .load(dpipe),
+    .in({dmem_offset, dmem_write, dmem_byte_enable, dmem_wdata}),
+    .out({dmem_offset_ACT, dmem_write_ACT, dmem_byte_enable_ACT, dmem_wdata})
+);
+
 input_transformer dcache_downstream_rdata_transformer
 (
     .line_data(l2_dcache_rdata),
-    .word_data(dmem_wdata),
-    .enable(dmem_write),
-    .offset(dmem_offset),
-    .wmask(dmem_byte_enable),
+    .word_data(dmem_wdata_ACT),
+    .enable(dmem_write_ACT),
+    .offset(dmem_offset_ACT),
+    .wmask(dmem_byte_enable_ACT),
     .dataout(dcache_downstream_rdata_transformed)
 );
 
 input_transformer dcache_upstream_wdata_transformer
 (
     .line_data(dcache_rdata),
-    .word_data(dmem_wdata),
-    .enable(dmem_write),
-    .offset(dmem_offset),
-    .wmask(dmem_byte_enable),
+    .word_data(dmem_wdata_ACT),
+    .enable(dmem_write_ACT),
+    .offset(dmem_offset_ACT),
+    .wmask(dmem_byte_enable_ACT),
     .dataout(dcache_wdata)
 );
 
 output_transformer icache_output_transformer
 (
     .line_data(icache_rdata),
-    .offset(imem_offset),
+    .offset(imem_offset_ACT),
     .dataout(imem_rdata)
 );
 
 output_transformer dcache_output_transformer
 (
     .line_data(dcache_rdata),
-    .offset(dmem_offset),
+    .offset(dmem_offset_ACT),
     .dataout(dmem_rdata)
 );
-    
+
 endmodule
