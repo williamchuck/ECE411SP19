@@ -207,7 +207,7 @@ compare cmp
 );
 
 /// MARK: - Components in MEM stage
-logic [31:0] dmem_address_untruncated;
+logic [31:0] dmem_address_untruncated, dmem_address_untruncated_WB;
 
 // blocking_unit_abstraction_layer dmem_blocking_unit
 // (
@@ -290,9 +290,9 @@ end
 rv32i_word dmem_rdata_shifted;
 always_comb begin
     dmem_rdata_shifted = dmem_rdata;
-    case(load_funct3_t'(ctw_MEM.funct3))
+    case(load_funct3_t'(ctw_WB.funct3))
         lb: begin
-            case(dmem_address_untruncated[1:0])
+            case(dmem_address_untruncated_WB[1:0])
                 2'b00: dmem_rdata_shifted = {{24{dmem_rdata[7]}}, dmem_rdata[7:0]};
                 2'b01: dmem_rdata_shifted = {{24{dmem_rdata[15]}}, dmem_rdata[15:8]};
                 2'b10: dmem_rdata_shifted = {{24{dmem_rdata[23]}}, dmem_rdata[23:16]};
@@ -302,7 +302,7 @@ always_comb begin
         end
 
         lh: begin
-            case(dmem_address_untruncated[1:0])
+            case(dmem_address_untruncated_WB[1:0])
                 2'b00: dmem_rdata_shifted = {{16{dmem_rdata[15]}}, dmem_rdata[15:0]};
                 2'b10: dmem_rdata_shifted = {{16{dmem_rdata[31]}}, dmem_rdata[31:16]};
                 default: ;
@@ -312,7 +312,7 @@ always_comb begin
         lw: ;
 
         lbu: begin
-            case(dmem_address_untruncated[1:0])
+            case(dmem_address_untruncated_WB[1:0])
                 2'b00: dmem_rdata_shifted = {24'd0, dmem_rdata[7:0]};
                 2'b01: dmem_rdata_shifted = {24'd0, dmem_rdata[15:8]};
                 2'b10: dmem_rdata_shifted = {24'd0, dmem_rdata[23:16]};
@@ -322,7 +322,7 @@ always_comb begin
         end
 
         lhu: begin
-            case(dmem_address_untruncated[1:0])
+            case(dmem_address_untruncated_WB[1:0])
                 2'b00: dmem_rdata_shifted = {16'd0, dmem_rdata[15:0]};
                 2'b10: dmem_rdata_shifted = {16'd0, dmem_rdata[31:16]};
                 default: ;
@@ -352,7 +352,7 @@ always_comb begin
         alu_out_wb_sel: regfile_in_WB = alu_out_WB;
         br_en_wb_sel: regfile_in_WB = {31'b0, br_en_WB};
         u_imm_wb_sel: regfile_in_WB = u_imm;
-        rdata_wb_sel: regfile_in_WB = dmem_rdata_WB;
+        rdata_wb_sel: regfile_in_WB = dmem_rdata_shifted;
         pc_inc_wb_sel: regfile_in_WB = pc_out_WB + 4;
         default: regfile_in_WB = 32'bX;
     endcase
@@ -396,8 +396,8 @@ register #($bits(rv32i_control_word)+32*4+1) MEM_WB_pipeline
 (
     .clk,
     .load(dmem_resp),
-    .in({ctw_MEM, alu_out_MEM, dmem_rdata_shifted, pc_out_MEM, ir_out_MEM, br_en_MEM}),
-    .out({ctw_WB, alu_out_WB, dmem_rdata_WB, pc_out_WB, ir_out_WB, br_en_WB})
+    .in({ctw_MEM, alu_out_MEM, dmem_address_untruncated, pc_out_MEM, ir_out_MEM, br_en_MEM}),
+    .out({ctw_WB, alu_out_WB, dmem_address_untruncated_WB, pc_out_WB, ir_out_WB, br_en_WB})
 );
 
 assign dmem_stall = 1'd0;
