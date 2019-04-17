@@ -31,9 +31,9 @@ logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, pc_out_WB;
 logic load_regfile;
 logic rs1_out_sel, rs2_out_sel;
 logic [1:0] rs1_out_EX_sel, rs2_out_EX_sel;
-logic [4:0] rs1, rs2, rd;
-logic [4:0] rs1_EX, rs2_EX;
-logic [4:0] rd_EX, rd_MEM, rd_WB;
+// logic [4:0] rs1, rs2, rd;
+// logic [4:0] rs1_EX, rs2_EX;
+// logic [4:0] rd_EX, rd_MEM, rd_WB;
 rv32i_word ir_out, ir_out_EX, ir_out_MEM, ir_out_WB;
 rv32i_word rs1_out, rs2_out, regfile_in_WB, regfile_in_MEM, alumux1_out, alumux2_out;
 rv32i_word rs1_out_EX, rs2_out_EX, rs2_out_MEM;
@@ -57,7 +57,7 @@ assign imem_address = pc_out;
 pc_register PC
 (
     .clk,
-    .load(imem_resp & ~data_hazard_stall),
+    .load(~data_hazard_stall && dmem_resp && imem_resp),
     .in(pcmux_out),
     .out(pc_out)
 );
@@ -86,9 +86,9 @@ regfile regfile
     .clk,
     .load(load_regfile),
     .in(regfile_in_WB),
-    .rs1,
-    .rs2,
-    .rd(rd_WB),
+    .rs1(ctw.rs1),
+    .rs2(ctw.rs2),
+    .rd(ctw_WB.rd),
     .rs1_out,
     .rs2_out
 );
@@ -100,18 +100,18 @@ assign selected_rs2_out = rs2_out_sel ? regfile_in_WB : rs2_out;
 control_rom control (
     .ir(ir_out),
     .pc(pc_out_ID),
-    .ctw,
-    .rs1,
-    .rs2,
-    .rd
+    .ctw
+    // .rs1,
+    // .rs2,
+    // .rd
 );
 
 hdu hdu
 (
     .dmem_read_EX(ctw_EX.dmem_read),
-    .rs1,
-    .rs2,
-    .rd_EX,
+    .rs1(ctw.rs1),
+    .rs2(ctw.rs2),
+    .rd_EX(ctw_EX.rd),
     .stall(data_hazard_stall)
 );
 
@@ -119,12 +119,12 @@ fwu fwu
 (
     .load_regfile_MEM(ctw_MEM.load_regfile),
     .load_regfile_WB(ctw_WB.load_regfile),
-    .rs1,
-    .rs2,
-    .rs1_EX(rs1_EX),
-    .rs2_EX(rs2_EX),
-    .rd_MEM,
-    .rd_WB,
+    .rs1(ctw.rs1),
+    .rs2(ctw.rs2),
+    .rs1_EX(ctw_EX.rs1),
+    .rs2_EX(ctw_EX.rs2),
+    .rd_MEM(ctw_MEM.rd),
+    .rd_WB(ctw_WB.rd),
     .rs1_out_sel,
     .rs2_out_sel,
     .rs1_out_EX_sel,
@@ -137,9 +137,9 @@ assign force_nop = (ctw_EX.opcode == op_br && br_en) | (ctw_MEM.opcode == op_br 
 
 /// MARK: - Components in EX stage
 
-assign rs1_EX = ir_out_EX[19:15];
-assign rs2_EX = ir_out_EX[24:20];
-assign rd_EX = ir_out_EX[11:7];
+// assign rs1_EX = ir_out_EX[19:15];
+// assign rs2_EX = ir_out_EX[24:20];
+// assign rd_EX = ir_out_EX[11:7];
 
 // Note that alumux1_sel and alumux2_sel are computed by FWU.
 assign pcmux_sel = ctw_EX.pcmux_sel[1] ? br_en : ctw_EX.pcmux_sel[0];
@@ -227,7 +227,7 @@ logic [31:0] dmem_address_untruncated, dmem_address_untruncated_WB;
 //     .rdata_synchronized(dmem_rdata_WB)
 // );
 
-assign rd_MEM = ir_out_MEM[11:7];
+// assign rd_MEM = ir_out_MEM[11:7];
 assign dmem_read = ctw_MEM.dmem_read;
 assign dmem_write = ctw_MEM.dmem_write;
 assign dmem_address_untruncated = alu_out_MEM;
@@ -345,7 +345,7 @@ end
 
 /// MARK: - Components in WB stage
 
-assign rd_WB = ir_out_WB[11:7];
+// assign rd_WB = ir_out_WB[11:7];
 
 always_comb begin
     case(ctw_WB.wbmux_sel)

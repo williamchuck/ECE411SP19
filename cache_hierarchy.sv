@@ -141,7 +141,7 @@ register #(s_offset+1+4+32) dmem_pipeline_reg
     .clk,
     .load(dpipe),
     .in({dmem_offset, dmem_write, dmem_byte_enable, dmem_wdata}),
-    .out({dmem_offset_ACT, dmem_write_ACT, dmem_byte_enable_ACT, dmem_wdata})
+    .out({dmem_offset_ACT, dmem_write_ACT, dmem_byte_enable_ACT, dmem_wdata_ACT})
 );
 
 input_transformer dcache_downstream_rdata_transformer

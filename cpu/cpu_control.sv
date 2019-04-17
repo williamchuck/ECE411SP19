@@ -10,10 +10,10 @@ module control_rom
     // input rv32i_reg ir_rs1,
     // input rv32i_reg ir_rs2,
     // input rv32i_reg ir_rd,
-    output rv32i_control_word ctw,
-    output rv32i_reg rs1,
-    output rv32i_reg rs2,
-    output rv32i_reg rd
+    output rv32i_control_word ctw
+    // output rv32i_reg rs1,
+    // output rv32i_reg rs2,
+    // output rv32i_reg rd
 );
 
 rv32i_opcode opcode;
@@ -48,16 +48,16 @@ always_comb begin : control_word_generation_logic
     ctw.funct3 = funct3;
     ctw.funct7 = funct7;
     ctw.pc = pc;
-    rs1 = 5'd0;
-    rs2 = 5'd0;
-    rd = 5'd0;
+    ctw.rs1 = 5'd0;
+    ctw.rs2 = 5'd0;
+    ctw.rd = 5'd0;
     error = 1'd0;
     
     case(opcode)
         op_lui: begin
             ctw.load_regfile = 1'd1;
             ctw.wbmux_sel = u_imm_wb_sel;
-            rd = ir_rd;
+            ctw.rd = ir_rd;
         end
 
         op_auipc: begin
@@ -65,7 +65,7 @@ always_comb begin : control_word_generation_logic
             ctw.aluop = alu_add;
             ctw.alumux1_sel = pc_out_sel;
             ctw.alumux2_sel = u_imm_sel;
-            rd = ir_rd;
+            ctw.rd = ir_rd;
         end
 
         op_jal: begin
@@ -75,7 +75,7 @@ always_comb begin : control_word_generation_logic
             ctw.alumux2_sel = j_imm_sel;
             ctw.aluop = alu_add;
             ctw.wbmux_sel = pc_inc_wb_sel;
-            rd = ir_rd;
+            ctw.rd = ir_rd;
         end
 
         op_jalr: begin
@@ -83,8 +83,8 @@ always_comb begin : control_word_generation_logic
             ctw.pcmux_sel = 2'b01;
             ctw.aluop = alu_add;
             ctw.wbmux_sel = pc_inc_wb_sel;
-            rs1 = ir_rs1;
-            rd = ir_rd;
+            ctw.rs1 = ir_rs1;
+            ctw.rd = ir_rd;
         end
 
         op_br: begin
@@ -92,8 +92,8 @@ always_comb begin : control_word_generation_logic
             ctw.alumux1_sel = pc_out_sel;
             ctw.alumux2_sel = b_imm_sel;
             ctw.aluop = alu_add;
-            rs1 = ir_rs1;
-            rs2 = ir_rs2;
+            ctw.rs1 = ir_rs1;
+            ctw.rs2 = ir_rs2;
         end
 
         op_load: begin
@@ -101,22 +101,22 @@ always_comb begin : control_word_generation_logic
             ctw.aluop = alu_add;
             ctw.dmem_read = 1'b1;
             ctw.wbmux_sel = rdata_wb_sel;
-            rs1 = ir_rs1;
-            rd = ir_rd;
+            ctw.rs1 = ir_rs1;
+            ctw.rd = ir_rd;
         end
 
         op_store: begin
             ctw.aluop = alu_add;
             ctw.alumux2_sel = s_imm_sel;
             ctw.dmem_write = 1'b1;
-            rs1 = ir_rs1;
-            rs2 = ir_rs2;
+            ctw.rs1 = ir_rs1;
+            ctw.rs2 = ir_rs2;
         end
 
         op_imm: begin
             ctw.load_regfile = 1'd1;
-            rs1 = ir_rs1;
-            rd = ir_rd;
+            ctw.rs1 = ir_rs1;
+            ctw.rd = ir_rd;
             if(arith_funct3_t'(funct3) == slt) begin
                 ctw.cmpop = blt;
                 ctw.wbmux_sel = br_en_wb_sel;
@@ -132,9 +132,9 @@ always_comb begin : control_word_generation_logic
 
         op_reg: begin
             ctw.load_regfile = 1'd1;
-            rs1 = ir_rs1;
-            rs2 = ir_rs2;
-            rd = ir_rd;
+            ctw.rs1 = ir_rs1;
+            ctw.rs2 = ir_rs2;
+            ctw.rd = ir_rd;
             if(arith_funct3_t'(funct3) == slt) begin
                 ctw.cmpop = blt;
                 ctw.wbmux_sel = br_en_wb_sel;
