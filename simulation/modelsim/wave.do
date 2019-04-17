@@ -1,3 +1,5 @@
+delete wave *
+restart -f
 onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate -label clk -radix hexadecimal /urchin_tb/dut/cpu/clk
@@ -81,4 +83,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ps
 update
-WaveRestoreZoom {52417963 ps} {52828121 ps}
+run 100us
