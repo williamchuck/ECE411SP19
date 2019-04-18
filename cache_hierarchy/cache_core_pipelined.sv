@@ -30,7 +30,8 @@ module cache_core_pipelined #(
     output logic downstream_read,
     output logic downstream_write,
     output logic [s_line-1:0] downstream_wdata,
-    output logic [31:0] downstream_address
+    output logic [31:0] downstream_address,
+    output logic downstream_request_ongoing
 );
 
 /// MARK: - Logics for INDEX stage
@@ -53,19 +54,22 @@ logic [s_tag-1:0] tagwb_ACT;
 logic [s_line-1:0] datas [num_ways];
 logic [s_line-1:0] line_out, line_in;
 logic [num_ways-2:0] lru, new_lru;
-logic downstream_resp_ACT, hit, dirty, new_dirty;
+logic downstream_resp_IDX, hit, dirty, new_dirty;
 logic request_ACT, write_ACT, do_wb_ACT, read_ACT;
 logic downstream_ready_ACT;
-
+logic downstream_ready_IDX, downstream_ready_IDX_selected;
+logic [s_line-1:0] downstream_rdata_IDX, downstream_rdata_IDX_selected;
+logic [s_line-1:0] downstream_rdata_ACT;
+logic request_ongoing, write_ongoing, read_ongoing;
 
 assign tag_ACT = address_ACT[31:s_offset+s_index];
 assign index_ACT = address_ACT[s_offset+s_index-1:s_offset];
 
 // `read` indicates exactly when the pipeline moves
-assign pipe = upstream_resp & ~stall;
+assign pipe = (downstream_resp_IDX | hit) | ~request_ongoing;
 
 // `load` when pipeline moves, but only if write is required
-assign load_cache = upstream_ready & (~hit | write_ACT) & ~stall;
+assign load_cache = upstream_ready & (~hit | write_ongoing) & ~stall;
 
 /// MARK: - Logics for WB stage
 logic [s_tag-1:0] tagwb_WB;
@@ -144,8 +148,8 @@ endgenerate
 
 assign hit = hits != {num_ways{1'b0}};
 assign line_in = hit ? upstream_wdata : downstream_rdata;
-assign do_wb_ACT = ~hit & dirty & downstream_resp_ACT;
-assign new_dirty = write_ACT;
+assign do_wb_ACT = ~hit & dirty & downstream_resp_IDX;
+assign new_dirty = write_ongoing;
 
 logic dirtymux_out;
 onehot_mux_1b #(s_way) dirtymux
@@ -183,21 +187,38 @@ lru_manager #(s_way) LRU_manager
     .new_lru
 );
 
-/// MARK: - INDEX/ACTION pipeline register
-
-register #(1) IDX_ACT_request
+register #(1) request_ongoing_reg
 (
     .clk,
     .load(pipe),
     .in(request_IDX),
-    .out(request_ACT)
+    .out(request_ongoing)
 );
+
+register #(1) read_ongoing_reg
+(
+    .clk,
+    .load(pipe),
+    .in(upstream_read),
+    .out(read_ongoing)
+);
+
+register #(1) write_ongoing_reg
+(
+    .clk,
+    .load(pipe),
+    .in(upstream_write),
+    .out(write_ongoing)
+);
+
+/// MARK: - INDEX/ACTION pipeline register
 
 register #(1) IDX_ACT_read
 (
     .clk,
     .load(pipe),
-    .in(upstream_read),
+    // .in(upstream_read & (downstream_ready_ACT | ~request_ongoing)),
+    .in(upstream_read & (downstream_resp_IDX | request_ongoing)),
     .out(read_ACT)
 );
 
@@ -213,11 +234,14 @@ register #(1) IDX_ACT_write
 (
     .clk,
     .load(pipe),
-    .in(upstream_write),
+    // .in(upstream_write & (downstream_ready_ACT | ~request_ongoing)),
+    .in(upstream_write & (downstream_resp_IDX | ~request_ongoing)),
     .out(write_ACT)
 );
 
 /// MARK: - ACTION/WB pipeline register
+
+assign request_ACT = write_ACT | read_ACT;
 
 register #(s_index + s_tag + s_line) ACT_WB_index
 (
@@ -239,15 +263,28 @@ register #(1) do_WB_reg
 
 assign downstream_address =
     do_wb ? {tagwb_WB, index_WB, {s_offset{1'b0}}} : address_ACT;
-assign downstream_read = ~hit & ~do_wb & (read_ACT | write_ACT);
+assign downstream_read = (~hit & ~do_wb & (read_ACT | write_ACT)) & ~downstream_ready_ACT;
 assign downstream_write = do_wb;
 assign downstream_wdata = line_out_WB;
-// assign downstream_resp_ACT = downstream_resp & ~do_wb;
-assign downstream_resp_ACT = downstream_ready & ~do_wb;
-assign downstream_ready_ACT = downstream_ready & ~do_wb;
 
-assign upstream_resp = upstream_ready | !request_ACT;
-assign upstream_rdata = downstream_ready_ACT ? downstream_rdata : line_out;
-assign upstream_ready = downstream_ready_ACT | hit;
+assign upstream_resp = upstream_ready | ~request_ongoing;
+assign upstream_rdata = downstream_ready_ACT ? downstream_rdata_ACT : line_out;
+assign upstream_ready = (downstream_ready_ACT | hit) & request_ongoing;
+
+assign downstream_resp_IDX = downstream_resp & ~do_wb;
+assign downstream_ready_IDX = downstream_ready & ~do_wb;
+assign downstream_rdata_IDX = downstream_rdata;
+assign downstream_ready_IDX_selected = downstream_ready_IDX ? downstream_ready_IDX : 1'b0;
+assign downstream_rdata_IDX_selected = downstream_ready_IDX ? downstream_rdata_IDX : {s_line{1'b0}};
+
+assign downstream_request_ongoing = request_ongoing;
+
+register #(s_line+1) downstream_reg
+(
+    .clk,
+    .load(pipe | downstream_ready_IDX),
+    .in({downstream_ready_IDX_selected, downstream_rdata_IDX_selected}),
+    .out({downstream_ready_ACT, downstream_rdata_ACT})
+);
 
 endmodule

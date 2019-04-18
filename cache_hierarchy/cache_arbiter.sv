@@ -10,6 +10,8 @@ module cache_arbiter #(
 )
 (
     input logic clk,
+    input logic l2_icache_request_ongoing,
+    input logic l2_dcache_request_ongoing,
     input logic imem_read,
     input logic dmem_read,
     input logic dmem_write,
@@ -45,15 +47,11 @@ module cache_arbiter #(
     output logic [s_line-1:0] l2_wdata
 );
 
-logic [s_line-1:0] rdata_buffer_out;
+// logic [s_line-1:0] rdata_buffer_out;
 // logic pending_resp, next_pending_resp;
 logic icache_enable, dcache_enable;
-logic icache_sel, dcache_sel;
 
 enum integer { IDLE, ICACHE, DCACHE } downward_state, next_downward_state, upward_state;
-
-assign icache_sel = l2_icache_read | l2_icache_write;
-assign dcache_sel = l2_dcache_read | l2_dcache_write;
 
 assign icache_read = icache_enable & imem_read;
 assign dcache_read = dcache_enable & dmem_read;
@@ -118,7 +116,7 @@ always_comb begin
             //         l2_dcache_resp = 1'b1;
             //         l2_dcache_rdata = rdata_buffer_out;
             //         next_pending_resp = 1'b0;
-            //     end else if (~dcache_sel) begin
+            //     end else if (~l2_dcache_request_ongoing) begin
             //         l2_icache_resp = 1'b1;
             //         l2_icache_ready = l2_ready;
             //     end else begin
@@ -141,7 +139,7 @@ always_comb begin
             //         l2_icache_resp = 1'b1;
             //         l2_icache_rdata = rdata_buffer_out;
             //         next_pending_resp = 1'b0;
-            //     end else if (~icache_sel) begin
+            //     end else if (~l2_icache_request_ongoing) begin
             //         l2_dcache_resp = 1'b1;
             //         l2_dcache_ready = l2_ready;
             //     end else begin
@@ -156,19 +154,19 @@ always_comb begin
     next_downward_state = downward_state;
     case(downward_state)
         IDLE:
-            if (icache_sel)
+            if (l2_icache_request_ongoing)
                 next_downward_state = ICACHE;
-            else if (dcache_sel)
+            else if (l2_dcache_request_ongoing)
                 next_downward_state = DCACHE;
 
         ICACHE:
-            if (l2_resp & ~dcache_sel)
+            if (l2_resp & ~l2_dcache_request_ongoing)
                 next_downward_state = IDLE;
             else if (l2_resp)
                 next_downward_state = DCACHE;
 
         DCACHE:
-            if (l2_resp & ~icache_sel)
+            if (l2_resp & ~l2_icache_request_ongoing)
                 next_downward_state = IDLE;
             else if (l2_resp)
                 next_downward_state = ICACHE;
@@ -178,9 +176,9 @@ end
 always_ff @( posedge clk ) begin
     downward_state <= next_downward_state;
     upward_state <= downward_state;
-    if (l2_resp) begin
-        rdata_buffer_out <= l2_rdata;
-    end
+    // if (l2_resp) begin
+    //     rdata_buffer_out <= l2_rdata;
+    // end
 end
 
 endmodule

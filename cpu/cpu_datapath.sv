@@ -95,7 +95,7 @@ assign selected_rs1_out = rs1_out_sel ? regfile_in_WB : rs1_out;
 assign selected_rs2_out = rs2_out_sel ? regfile_in_WB : rs2_out;
 
 logic force_nop;
-assign force_nop = (data_hazard_stall | control_hazard_stall | ~imem_ready) & dmem_resp;
+assign force_nop = data_hazard_stall | control_hazard_stall | ~imem_ready;
 
 control_rom control (
     .ir(imem_rdata),
