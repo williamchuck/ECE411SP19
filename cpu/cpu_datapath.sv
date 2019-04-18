@@ -47,7 +47,7 @@ assign imem_wdata = 32'h00000000;
 assign imem_read = 1'b1;//imem_permit;
 
 logic [31:0] dmem_wdata_unshifted;
-logic data_hazard_stall;
+logic data_hazard_stall, control_hazard_stall;
 logic pcmux_sel, br_en, br_en_MEM, br_en_WB;
 logic [31:0] cmpmux_out, alu_out, alu_out_WB, alu_out_MEM;
 logic [31:0] dmem_rdata_WB;
@@ -62,14 +62,11 @@ pc_register PC
     .out(pc_out)
 );
 
+assign control_hazard_stall = (ctw_EX.opcode == op_br && br_en) | (ctw_MEM.opcode == op_br && br_en_MEM) | ctw_EX.opcode == op_jal | ctw_EX.opcode == op_jalr | ctw_MEM.opcode == op_jal | ctw_MEM.opcode == op_jalr;
+
 assign pcmux_out = pcmux_sel ? alu_out : pc_out + 32'd4;
 
 /// MARK: - Components in ID stage
-
-
-logic force_nop;
-
-assign ir_out = force_nop ? 32'h00000013 : imem_rdata;
 
 // assign load_regfile = ctw_WB.load_regfile && dmem_ready && ctw_WB.opcode == op_load);
 
@@ -97,14 +94,18 @@ logic [31:0] selected_rs1_out, selected_rs2_out;
 assign selected_rs1_out = rs1_out_sel ? regfile_in_WB : rs1_out;
 assign selected_rs2_out = rs2_out_sel ? regfile_in_WB : rs2_out;
 
+logic force_nop;
+assign force_nop = (data_hazard_stall | control_hazard_stall | ~imem_ready) & dmem_resp;
+
 control_rom control (
-    .ir(ir_out),
+    .ir(imem_rdata),
     .pc(pc_out_ID),
     .ctw
-    // .rs1,
-    // .rs2,
-    // .rd
 );
+
+assign ir_out = force_nop ? 32'd0 : imem_rdata;
+
+assign ctwmux_out = force_nop ? {$bits(ctwmux_out){1'b0}} : ctw;
 
 hdu hdu
 (
@@ -131,15 +132,7 @@ fwu fwu
     .rs2_out_EX_sel
 );
 
-assign ctwmux_out = data_hazard_stall ? 32'h00000013 : ctw;
-
-assign force_nop = (ctw_EX.opcode == op_br && br_en) | (ctw_MEM.opcode == op_br && br_en_MEM) | ~imem_ready;
-
 /// MARK: - Components in EX stage
-
-// assign rs1_EX = ir_out_EX[19:15];
-// assign rs2_EX = ir_out_EX[24:20];
-// assign rd_EX = ir_out_EX[11:7];
 
 // Note that alumux1_sel and alumux2_sel are computed by FWU.
 assign pcmux_sel = ctw_EX.pcmux_sel[1] ? br_en : ctw_EX.pcmux_sel[0];
@@ -209,25 +202,6 @@ compare cmp
 /// MARK: - Components in MEM stage
 logic [31:0] dmem_address_untruncated, dmem_address_untruncated_WB;
 
-// blocking_unit_abstraction_layer dmem_blocking_unit
-// (
-//     .clk,
-//     .select(ctw_MEM.dmem_read | ctw_MEM.dmem_write),
-//     .resp(dmem_resp),
-//     .pc(pc_out_MEM),
-//     .permit(dmem_permit),
-//     .busy(dmem_busy)
-// );
-
-// rdata_buffer dmem_buffer(
-//     .clk,
-//     .resp(dmem_resp),
-//     .busy(blocking_unit_busy),
-//     .rdata(dmem_rdata),
-//     .rdata_synchronized(dmem_rdata_WB)
-// );
-
-// assign rd_MEM = ir_out_MEM[11:7];
 assign dmem_read = ctw_MEM.dmem_read;
 assign dmem_write = ctw_MEM.dmem_write;
 assign dmem_address_untruncated = alu_out_MEM;
@@ -344,8 +318,6 @@ always_comb begin
 end
 
 /// MARK: - Components in WB stage
-
-// assign rd_WB = ir_out_WB[11:7];
 
 always_comb begin
     case(ctw_WB.wbmux_sel)

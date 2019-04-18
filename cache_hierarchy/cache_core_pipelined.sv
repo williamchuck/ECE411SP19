@@ -24,7 +24,8 @@ module cache_core_pipelined #(
     output logic [s_line-1:0] upstream_rdata,
 
     // Downstream interface
-    input downstream_resp,
+    input logic downstream_resp,
+    input logic downstream_ready,
     input [s_line-1:0] downstream_rdata,
     output logic downstream_read,
     output logic downstream_write,
@@ -54,12 +55,13 @@ logic [s_line-1:0] line_out, line_in;
 logic [num_ways-2:0] lru, new_lru;
 logic downstream_resp_ACT, hit, dirty, new_dirty;
 logic request_ACT, write_ACT, do_wb_ACT, read_ACT;
+logic downstream_ready_ACT;
+
 
 assign tag_ACT = address_ACT[31:s_offset+s_index];
 assign index_ACT = address_ACT[s_offset+s_index-1:s_offset];
 
 // `read` indicates exactly when the pipeline moves
-assign upstream_ready = downstream_resp_ACT | hit;
 assign pipe = upstream_resp & ~stall;
 
 // `load` when pipeline moves, but only if write is required
@@ -217,35 +219,19 @@ register #(1) IDX_ACT_write
 
 /// MARK: - ACTION/WB pipeline register
 
-register #(s_index) ACT_WB_index
+register #(s_index + s_tag + s_line) ACT_WB_index
 (
     .clk,
-    .load(pipe & ~hit),
-    .in(index_ACT),
-    .out(index_WB)
+    .load(pipe & ~hit & request_ACT),
+    .in({index_ACT, tagwb_ACT, line_out}),
+    .out({index_WB, tagwb_WB, line_out_WB})
 );
 
-register #(s_tag) ACT_WB_tagwb
+register #(1) do_WB_reg
 (
     .clk,
-    .load(pipe & ~hit),
-    .in(tagwb_ACT),
-    .out(tagwb_WB)
-);
-
-register #(s_line) ACT_WB_data
-(
-    .clk,
-    .load(pipe & ~hit),
-    .in(line_out),
-    .out(line_out_WB)
-);
-
-register #(1) ACT_WB_do_wb
-(
-    .clk,
-    .load(pipe & ~hit),
-    .in(do_wb_ACT),
+    .load((pipe & ~hit & request_ACT) | (do_wb & downstream_resp)),
+    .in((pipe & ~hit & request_ACT) ? do_wb_ACT : 1'd0),
     .out(do_wb)
 );
 
@@ -256,9 +242,12 @@ assign downstream_address =
 assign downstream_read = ~hit & ~do_wb & (read_ACT | write_ACT);
 assign downstream_write = do_wb;
 assign downstream_wdata = line_out_WB;
-assign downstream_resp_ACT = downstream_resp & ~do_wb;
+// assign downstream_resp_ACT = downstream_resp & ~do_wb;
+assign downstream_resp_ACT = downstream_ready & ~do_wb;
+assign downstream_ready_ACT = downstream_ready & ~do_wb;
 
 assign upstream_resp = upstream_ready | !request_ACT;
-assign upstream_rdata = downstream_resp_ACT ? downstream_rdata : line_out;
+assign upstream_rdata = downstream_ready_ACT ? downstream_rdata : line_out;
+assign upstream_ready = downstream_ready_ACT | hit;
 
 endmodule

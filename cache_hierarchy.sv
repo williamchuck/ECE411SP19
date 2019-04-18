@@ -51,12 +51,15 @@ logic dmem_write_ACT;
 logic icache_read, dcache_read, dcache_write;
 logic l2_icache_resp, l2_icache_read, l2_icache_write, l2_dcache_resp;
 logic l2_dcache_read, l2_dcache_write, l2_read, l2_write, l2_resp;
+logic l2_stall, l2_ready;
 logic [31:0] imem_rdata_transformer_out, dmem_rdata_transformer_out, dmem_wdata_ACT;
 logic [31:0] l2_icache_address, l2_dcache_address, l2_address;
 logic [255:0] icache_rdata, l2_icache_rdata, l2_icache_wdata;
 logic [255:0] l2_dcache_wdata, dcache_wdata, dcache_rdata;
 logic [255:0] dcache_downstream_rdata_transformed, l2_wdata, l2_rdata, l2_dcache_rdata;
 logic [255:0] pmem_rdata_reg_out;
+
+logic l2_icache_ready, l2_dcache_ready;
 
 register #(256) pmem_rdata_reg
 (
@@ -79,6 +82,7 @@ cache_core_pipelined #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache
     .upstream_ready(imem_ready),
 
     .downstream_resp(l2_icache_resp),
+    .downstream_ready(l2_icache_ready),
     .downstream_rdata(l2_icache_rdata),
     .downstream_wdata(l2_icache_wdata),
     .downstream_read(l2_icache_read),
@@ -99,6 +103,7 @@ cache_core_pipelined #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache
     .upstream_ready(dmem_ready),
 
     .downstream_resp(l2_dcache_resp),
+    .downstream_ready(l2_dcache_ready),
     .downstream_rdata(dcache_downstream_rdata_transformed),
     .downstream_wdata(l2_dcache_wdata),
     .downstream_read(l2_dcache_read),
@@ -106,16 +111,19 @@ cache_core_pipelined #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache
     .downstream_address(l2_dcache_address)
 );
 
-cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(3)) l2_cache_core
+cache_core_pipelined #(.s_offset(s_offset), .s_index(s_index), .s_way(3)) l2_cache_core
 (
     .clk,
+    .stall(l2_stall),
     .upstream_read(l2_read),
     .upstream_write(l2_write),
     .upstream_address(l2_address),
     .upstream_wdata(l2_wdata),
     .upstream_rdata(l2_rdata),
     .upstream_resp(l2_resp),
+    .upstream_ready(l2_ready),
     .downstream_resp(pmem_resp),
+    .downstream_ready(pmem_resp),
     .downstream_rdata(pmem_rdata),
     .downstream_wdata(pmem_wdata),
     .downstream_read(pmem_read),
@@ -125,7 +133,40 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(3)) l2_cache_core
 
 cache_arbiter arbiter
 (
-    .*
+    .clk,
+    .imem_read,
+    .dmem_read,
+    .dmem_write,
+    .icache_read,
+    .dcache_read,
+    .dcache_write,
+
+    .l2_icache_read,
+    .l2_icache_write,
+    .imem_stall,
+    .l2_icache_address,
+    .l2_icache_wdata,
+    .l2_icache_resp,
+    .l2_icache_rdata,
+    .l2_icache_ready,
+
+    .l2_dcache_read,
+    .l2_dcache_write,
+    .dmem_stall,
+    .l2_dcache_address,
+    .l2_dcache_wdata,
+    .l2_dcache_resp,
+    .l2_dcache_rdata,
+    .l2_dcache_ready,
+
+    .l2_ready,
+    .l2_stall,
+    .l2_resp,
+    .l2_rdata,
+    .l2_read,
+    .l2_write,
+    .l2_address,
+    .l2_wdata
 );
 
 register #(s_offset) imem_pipeline_reg

@@ -4,16 +4,7 @@ module control_rom
 (
     input rv32i_word ir,
     input rv32i_word pc,
-    // input rv32i_opcode opcode,
-    // input logic [2:0] funct3,
-    // input logic [6:0] funct7,
-    // input rv32i_reg ir_rs1,
-    // input rv32i_reg ir_rs2,
-    // input rv32i_reg ir_rd,
     output rv32i_control_word ctw
-    // output rv32i_reg rs1,
-    // output rv32i_reg rs2,
-    // output rv32i_reg rd
 );
 
 rv32i_opcode opcode;

@@ -25,6 +25,7 @@ logic ready;
 initial
 begin
     $readmemh("memory.lst", mem);
+    resp = 1'd0;
 end
 
 enum int unsigned {
