@@ -47,7 +47,7 @@ assign imem_wdata = 32'h00000000;
 assign imem_read = 1'b1;//imem_permit;
 
 logic [31:0] dmem_wdata_unshifted;
-logic data_hazard_stall;
+logic data_hazard_stall, control_hazard_stall;
 logic pcmux_sel, br_en, br_en_MEM, br_en_WB;
 logic [31:0] cmpmux_out, alu_out, alu_out_WB, alu_out_MEM;
 logic [31:0] dmem_rdata_WB;
@@ -66,10 +66,11 @@ assign pcmux_out = pcmux_sel ? alu_out : pc_out + 32'd4;
 
 /// MARK: - Components in ID stage
 
-
 logic force_nop;
+assign ir_out = force_nop ? 32'd0 : imem_rdata;
+assign ctwmux_out = force_nop ? {$bits(ctwmux_out){1'b0}} : ctw;
 
-assign ir_out = force_nop ? 32'h00000013 : imem_rdata;
+// assign ir_out = force_nop ? 32'h00000013 : imem_rdata;
 
 // assign load_regfile = ctw_WB.load_regfile && dmem_ready && ctw_WB.opcode == op_load);
 
@@ -98,7 +99,7 @@ assign selected_rs1_out = rs1_out_sel ? regfile_in_WB : rs1_out;
 assign selected_rs2_out = rs2_out_sel ? regfile_in_WB : rs2_out;
 
 control_rom control (
-    .ir(ir_out),
+    .ir(imem_rdata),
     .pc(pc_out_ID),
     .ctw
     // .rs1,
@@ -131,9 +132,13 @@ fwu fwu
     .rs2_out_EX_sel
 );
 
-assign ctwmux_out = data_hazard_stall ? 32'h00000013 : ctw;
+// assign ctwmux_out = data_hazard_stall ? 32'h00000013 : ctw;
+// assign ctwmux_out = force_nop ? {$bits(ctwmux_out){1'b0}} : ctw;
 
-assign force_nop = (ctw_EX.opcode == op_br && br_en) | (ctw_MEM.opcode == op_br && br_en_MEM) | ~imem_ready;
+assign control_hazard_stall = (ctw_EX.opcode == op_br && br_en) | (ctw_MEM.opcode == op_br && br_en_MEM) | ctw_EX.opcode == op_jal | ctw_EX.opcode == op_jalr | ctw_MEM.opcode == op_jal | ctw_MEM.opcode == op_jalr;
+
+// assign force_nop = (ctw_EX.opcode == op_br && br_en) | (ctw_MEM.opcode == op_br && br_en_MEM) | ~imem_ready;
+assign force_nop = (data_hazard_stall | control_hazard_stall | ~imem_ready);
 
 /// MARK: - Components in EX stage
 
