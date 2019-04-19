@@ -89,16 +89,19 @@ add wave -noupdate /urchin_tb/dut/cache/arbiter/l2_read
 add wave -noupdate /urchin_tb/dut/cache/arbiter/state
 add wave -noupdate /urchin_tb/sm/error
 add wave -noupdate /urchin_tb/sm/poison_inst
-add wave -noupdate -radix hexadecimal /urchin_tb/memory/address
+add wave -noupdate -radix hexadecimal /urchin_tb/sm/imem_addr
 add wave -noupdate -radix hexadecimal /urchin_tb/sm/imem_rdata
 add wave -noupdate -radix hexadecimal /urchin_tb/sm/imem_valid
 add wave -noupdate -radix hexadecimal /urchin_tb/sm/dmem_rdata
 add wave -noupdate /urchin_tb/sm/dmem_valid
+add wave -noupdate -radix hexadecimal /urchin_tb/sm/dmem_addr
+add wave -noupdate -radix hexadecimal /urchin_tb/sm/wdata
+add wave -noupdate -radix hexadecimal /urchin_tb/sm/write
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {311466 ps} 0}
+WaveRestoreCursors {{Cursor 1} {990378 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 399
-configure wave -valuecolwidth 40
+configure wave -valuecolwidth 245
 configure wave -justifyvalue left
 configure wave -signalnamewidth 0
 configure wave -snapdistance 10
@@ -111,4 +114,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ps
 update
-WaveRestoreZoom {0 ps} {754412 ps}
+WaveRestoreZoom {811844 ps} {1840100 ps}

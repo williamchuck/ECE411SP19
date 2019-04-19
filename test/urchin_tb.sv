@@ -8,6 +8,13 @@ logic [3:0] imem_byte_enable, dmem_byte_enable;
 logic [31:0] imem_address, imem_rdata, imem_wdata, dmem_address, dmem_rdata, dmem_wdata;
 logic imem_ready, dmem_ready, imem_stall, dmem_stall;
 
+
+logic EX_ins_valid;
+logic [31:0] EX_ir;
+logic [31:0] EX_pc;
+logic [31:0] dmem_address_WB;
+logic WB_load;
+
 logic clk;
 logic pmem_resp;
 logic pmem_read;
@@ -103,11 +110,11 @@ shadow_memory sm
 (
     .clk,
 
-    .imem_valid(imem_ready),
-    .imem_addr(pmem_address),
-    .imem_rdata,
-    .dmem_valid(dmem_ready),
-    .dmem_addr(pmem_address),
+    .imem_valid(EX_ins_valid),
+    .imem_addr(EX_pc),
+    .imem_rdata(EX_ir),
+    .dmem_valid(dmem_ready && WB_load && !dmem_write),
+    .dmem_addr(dmem_write ? dmem_address : dmem_address_WB),
     .dmem_rdata,
     .write(dmem_write),
     .wmask(dmem_byte_enable),

@@ -23,7 +23,15 @@ module cpu_datapath (
     output logic [31:0] dmem_address,
     output logic [3:0] dmem_byte_enable,
     output logic [31:0] dmem_wdata,
-    output logic dmem_stall
+    output logic dmem_stall,
+
+    //shadow memory
+    output logic EX_ins_valid,
+    output logic [31:0] EX_ir,
+    output logic [31:0] EX_pc,
+
+    output logic [31:0] dmem_address_WB,
+    output logic WB_load
 );
 
 logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, pc_out_WB;
@@ -211,28 +219,13 @@ compare cmp
     .br_en
 );
 
+assign EX_ins_valid = ctw_EX.opcode != op_nop;
+assign EX_ir = ctw_EX.ir;
+assign EX_pc = ctw_EX.pc;
+
 /// MARK: - Components in MEM stage
 logic [31:0] dmem_address_untruncated, dmem_address_untruncated_WB;
 
-// blocking_unit_abstraction_layer dmem_blocking_unit
-// (
-//     .clk,
-//     .select(ctw_MEM.dmem_read | ctw_MEM.dmem_write),
-//     .resp(dmem_resp),
-//     .pc(pc_out_MEM),
-//     .permit(dmem_permit),
-//     .busy(dmem_busy)
-// );
-
-// rdata_buffer dmem_buffer(
-//     .clk,
-//     .resp(dmem_resp),
-//     .busy(blocking_unit_busy),
-//     .rdata(dmem_rdata),
-//     .rdata_synchronized(dmem_rdata_WB)
-// );
-
-// assign rd_MEM = ir_out_MEM[11:7];
 assign dmem_read = ctw_MEM.dmem_read;
 assign dmem_write = ctw_MEM.dmem_write;
 assign dmem_address_untruncated = alu_out_MEM;
@@ -350,7 +343,7 @@ end
 
 /// MARK: - Components in WB stage
 
-// assign rd_WB = ir_out_WB[11:7];
+assign WB_load = ctw_WB.opcode == op_load;
 
 always_comb begin
     case(ctw_WB.wbmux_sel)
@@ -397,12 +390,12 @@ register #($bits(rv32i_control_word)+4*32+1) EX_MEM_pipeline
 
 /// MARK: - MEM/WB pipeline register
 
-register #($bits(rv32i_control_word)+32*4+1) MEM_WB_pipeline
+register #($bits(rv32i_control_word)+32*4+1 + 32) MEM_WB_pipeline
 (
     .clk,
     .load(dmem_resp),
-    .in({ctw_MEM, alu_out_MEM, dmem_address_untruncated, pc_out_MEM, ir_out_MEM, br_en_MEM}),
-    .out({ctw_WB, alu_out_WB, dmem_address_untruncated_WB, pc_out_WB, ir_out_WB, br_en_WB})
+    .in({ctw_MEM, alu_out_MEM, dmem_address_untruncated, pc_out_MEM, ir_out_MEM, br_en_MEM, dmem_address}),
+    .out({ctw_WB, alu_out_WB, dmem_address_untruncated_WB, pc_out_WB, ir_out_WB, br_en_WB, dmem_address_WB})
 );
 
 assign dmem_stall = 1'd0;
