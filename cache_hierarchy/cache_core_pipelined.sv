@@ -217,35 +217,19 @@ register #(1) IDX_ACT_write
 
 /// MARK: - ACTION/WB pipeline register
 
-register #(s_index) ACT_WB_index
+register #(s_index + s_tag + s_line) ACT_WB_index
 (
     .clk,
-    .load(pipe & ~hit),
-    .in(index_ACT),
-    .out(index_WB)
+    .load(pipe & ~hit & request_ACT),
+    .in({index_ACT, tagwb_ACT, line_out}),
+    .out({index_WB, tagwb_WB, line_out_WB})
 );
 
-register #(s_tag) ACT_WB_tagwb
+register #(1) do_wb_reg
 (
     .clk,
-    .load(pipe & ~hit),
-    .in(tagwb_ACT),
-    .out(tagwb_WB)
-);
-
-register #(s_line) ACT_WB_data
-(
-    .clk,
-    .load(pipe & ~hit),
-    .in(line_out),
-    .out(line_out_WB)
-);
-
-register #(1) ACT_WB_do_wb
-(
-    .clk,
-    .load(pipe & ~hit),
-    .in(do_wb_ACT),
+    .load((pipe & ~hit & request_ACT) | (do_wb & downstream_resp)),
+    .in((pipe & ~hit & request_ACT) ? do_wb_ACT : 1'd0),
     .out(do_wb)
 );
 

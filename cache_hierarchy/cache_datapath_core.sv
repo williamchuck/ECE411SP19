@@ -18,6 +18,7 @@ module cache_datapath_core #(
     input logic ld_wb,
     input logic ld_LRU,
     input logic new_dirty,
+    input logic wb_required,
     output logic hit,
     output logic valid,
     output logic dirty,
@@ -36,18 +37,18 @@ module cache_datapath_core #(
 
 // Address parsing
 logic [s_tag-1:0] tag;
-logic [s_index-1:0] index, index_;
+logic [s_index-1:0] index, index_, index_WB;
 
 logic [num_ways-1:0] way;
 logic [num_ways-2:0] lru, new_lru;
 logic [num_ways-1:0] equals, dirtys, valids, hits;
 logic [s_tag-1:0] tags [num_ways];
-logic [s_tag-1:0] tagmux_out, tagmux_out_;
+logic [s_tag-1:0] tagmux_out, tagmux_out_, tagmux_out_WB;
 logic [s_line-1:0] hitmux_out, wbmux_out, inmux_out, hit_data, miss_data;
 logic [s_line-1:0] datas [num_ways];
 logic [s_line-1:0] line_dataout;
 
-logic [31:0] _address_;
+logic [31:0] _address_, _address_WB;
 
 register #(32) upstream_to_downstream_address_buffer
 (
@@ -65,11 +66,29 @@ register #(s_tag) upstream_to_downstream_tagmuxout_buffer
     .out(tagmux_out_)
 );
 
+register #(s_tag) tag_wb_buffer
+(
+    .clk,
+    .load(wb_required),
+    .in(tagmux_out_),
+    .out(tagmux_out_WB)
+);
+
+register #(32) address_wb_buffer
+(
+    .clk,
+    .load(wb_required),
+    .in(_address_),
+    .out(_address_WB)
+);
+
 assign tag = _address_[31:s_offset+s_index];
 assign index_ = _address_[s_offset+s_index-1:s_offset];
 assign index = upstream_address[s_offset+s_index-1:s_offset];
+assign index_WB = _address_WB[s_offset+s_index-1:s_offset];
 
-assign downstream_address = downstream_address_sel ? {tagmux_out_, index_, {s_offset{1'b0}}} : _address_;
+// assign downstream_address = downstream_address_sel ? {tagmux_out_, index_, {s_offset{1'b0}}} : _address_;
+assign downstream_address = downstream_address_sel ? {tagmux_out_WB, index_WB, {s_offset{1'b0}}} : _address_;
 assign upstream_rdata = downstream_resp ? downstream_rdata : line_dataout;
 
 onehot_mux #(s_way, s_tag) tagmux

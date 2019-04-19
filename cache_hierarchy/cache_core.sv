@@ -29,6 +29,7 @@ module cache_core #(
 logic hit, valid; //Copied from output signals
 logic dirty, cache_read, cache_load_en;
 logic downstream_address_sel, ld_wb, ld_LRU, new_dirty;
+logic wb_required;
 
 cache_datapath_core #(
     .s_offset(s_offset), .s_index(s_index), .s_way(s_way)) datapath
@@ -42,6 +43,7 @@ cache_datapath_core #(
     .ld_wb,
     .ld_LRU,
     .new_dirty,
+    .wb_required,
     .hit,
     .valid,
     .dirty,
@@ -72,6 +74,7 @@ cache_control control
     .ld_wb,
     .ld_LRU,
     .new_dirty,
+    .wb_required,
 
     // Cache-CPU interface
     .upstream_read,
