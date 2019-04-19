@@ -32,3 +32,5 @@ timing
 *.summary
 *.tcl
 *.txt
+*.sh
+*.ld
