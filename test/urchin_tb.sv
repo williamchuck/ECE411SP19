@@ -106,6 +106,15 @@ physical_memory memory(
     .rdata(pmem_rdata)
 );
 
+// always @(posedge clk) begin
+//     if (pmem_address == 32'hd80 && pmem_write) begin
+//         $display("%0t pmem Writing to d80 %h", $time, pmem_wdata);
+//     end
+//     if (pmem_address == 32'hd80 && pmem_read) begin
+//         $display("%0t pmem Reading from d80 %h", $time, pmem_rdata);
+//     end
+// end
+
 shadow_memory sm
 (
     .clk,

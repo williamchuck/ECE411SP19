@@ -89,16 +89,22 @@ add wave -noupdate /urchin_tb/dut/cache/arbiter/l2_read
 add wave -noupdate /urchin_tb/dut/cache/arbiter/state
 add wave -noupdate /urchin_tb/sm/error
 add wave -noupdate /urchin_tb/sm/poison_inst
-add wave -noupdate -radix hexadecimal /urchin_tb/sm/imem_addr
-add wave -noupdate -radix hexadecimal /urchin_tb/sm/imem_rdata
-add wave -noupdate -radix hexadecimal /urchin_tb/sm/imem_valid
-add wave -noupdate -radix hexadecimal /urchin_tb/sm/dmem_rdata
-add wave -noupdate /urchin_tb/sm/dmem_valid
-add wave -noupdate -radix hexadecimal /urchin_tb/sm/dmem_addr
-add wave -noupdate -radix hexadecimal /urchin_tb/sm/wdata
-add wave -noupdate -radix hexadecimal /urchin_tb/sm/write
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/datapath/wb_reg/data
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/datapath/wb_reg/in
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/datapath/wb_reg/load
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/datapath/wb_reg/out
+add wave -noupdate /urchin_tb/dut/cache/l2_cache_core/datapath/way
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/datapath/index_WB
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/datapath/index_
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/datapath/index
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/datapath/datas
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/datapath/inmux_out
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/cache_read
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/dirty
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/wb_required
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/control/state
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {990378 ps} 0}
+WaveRestoreCursors {{Cursor 1} {242304934 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 399
 configure wave -valuecolwidth 245
@@ -114,4 +120,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ps
 update
-WaveRestoreZoom {811844 ps} {1840100 ps}
+WaveRestoreZoom {241900790 ps} {242157854 ps}
