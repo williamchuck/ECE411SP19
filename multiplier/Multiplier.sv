@@ -27,7 +27,7 @@ Control control_unit
 RegM_32 registerA
 (
     .Clk(Clk),
-    .Reset(control_clearALoadB), //rgister A is 0'd when Reset is pressed or ClearA_LoadB is pressed
+    .Reset(control_clearALoadB | init), //rgister A is 0'd when Reset is pressed or ClearA_LoadB is pressed
     .Load(control_load), //register A loads when the output of the control unit (control load) is high 
     .D(Sum),
     .Shift_In(X), //registers A and B shift when the control unit tells them to, during the appropriate state
@@ -40,7 +40,7 @@ RegM_32 registerA
 RegM_32 registerB
 (
     .Clk(Clk),
-    .Reset(1'd0),
+    .Reset(init),
     .Load(control_clearALoadB), //register B only loads from switches when ClearA_LoadB is high 
     .D(mulB),
     .Shift_In(A_LSB), //digit in the LSB of A

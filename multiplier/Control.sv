@@ -74,7 +74,7 @@ always_comb begin
         end
     
         LOAD: begin
-            Subtract = !counter & m;
+            Subtract = !nextCounter & m;
             Load = 1'd1;
         end
 

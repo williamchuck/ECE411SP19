@@ -25,7 +25,7 @@ end
 initial begin: TEST_VECTORS
 Run = 0;
 mulA = -10;
-mulB = 12;
+mulB = -22;
 
 #10
 Run = 1;
