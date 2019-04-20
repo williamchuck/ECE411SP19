@@ -11,7 +11,7 @@ typedef enum bit [6:0] {
     op_imm   = 7'b0010011, //arith ops with register/immediate operands (I type)
     op_reg   = 7'b0110011, //arith ops with register operands (R type)
     op_csr   = 7'b1110011, //control and status register (I type)
-    op_nop   = 7'b0000000  //no-op
+    op_nop   = 7'b1111111  //no-op
 } rv32i_opcode;
 
 typedef enum bit [1:0] {
@@ -57,6 +57,19 @@ typedef enum bit [4:0] {
     c_swsp =  {cop2_2, cop3_6},
     c_fswsp = {cop2_2, cop3_7} //not supported
 } rv32ic_opcode;
+
+typedef enum bit [1:0] { 
+    irh_one = 1'd0,
+    irh_rdata_high = 2'd1
+    irh_rdata_low = 2'd2
+} ir_high_sel_t;
+
+typedef enum bit [1:0] { 
+    irl_one = 2'd0,
+    irl_rdata_low = 2'd1,
+    irl_low_full = 2'd2,
+    irl_half = 2'd3
+} ir_low_sel_t;
 
 typedef enum bit {
     rs1_EX_sel = 1'd0,
