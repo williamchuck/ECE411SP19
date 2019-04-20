@@ -58,6 +58,9 @@ logic [255:0] l2_dcache_wdata, dcache_wdata, dcache_rdata;
 logic [255:0] dcache_downstream_rdata_transformed, l2_wdata, l2_rdata, l2_dcache_rdata;
 logic [255:0] pmem_rdata_reg_out;
 
+
+logic [7:0] way;
+
 register #(256) pmem_rdata_reg
 (
     .clk,
@@ -106,6 +109,15 @@ cache_core_pipelined #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache
     .downstream_address(l2_dcache_address)
 );
 
+// always @(posedge clk) begin
+//     if (dmem_address == 32'hd80 && dcache_write) begin
+//         $display("%0t Writing to d80 %h", $time, dcache_wdata);
+//     end
+//     if (dmem_address == 32'hd80 && dcache_read) begin
+//         $display("%0t Reading from d80 %h", $time, dcache_rdata);
+//     end
+// end
+
 cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(3)) l2_cache_core
 (
     .clk,
@@ -116,12 +128,22 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(3)) l2_cache_core
     .upstream_rdata(l2_rdata),
     .upstream_resp(l2_resp),
     .downstream_resp(pmem_resp),
-    .downstream_rdata(pmem_rdata),
+    .downstream_rdata(l2_write ? l2_wdata : pmem_rdata),
     .downstream_wdata(pmem_wdata),
     .downstream_read(pmem_read),
     .downstream_write(pmem_write),
-    .downstream_address(pmem_address)
+    .downstream_address(pmem_address),
+    .way
 );
+
+always @(posedge clk) begin
+    if (l2_address == 32'hd80 && l2_write) begin
+        $display("%0t L2 Writing to d80 %h Way %b", $time, l2_wdata, way);
+    end
+    if (l2_address == 32'hd80 && l2_read) begin
+        $display("%0t L2 Reading from d80 %h Way %b", $time, l2_rdata, way);
+    end
+end
 
 cache_arbiter arbiter
 (

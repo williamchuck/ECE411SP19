@@ -31,6 +31,7 @@ enum int unsigned {
 } state, next_state;
 
 always_comb begin : state_based_action
+    wb_required = 0;
     cache_read = 0;
     cache_load_en = 0;
     downstream_address_sel = 0;

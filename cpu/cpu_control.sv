@@ -51,6 +51,7 @@ always_comb begin : control_word_generation_logic
     ctw.rs1 = 5'd0;
     ctw.rs2 = 5'd0;
     ctw.rd = 5'd0;
+    ctw.ir = ir;
     error = 1'd0;
     
     case(opcode)
