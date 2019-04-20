@@ -24,11 +24,13 @@ module cache_core #(
     output logic [s_line-1:0] downstream_wdata,
     output logic [31:0] downstream_address,
     output logic downstream_read,
-    output logic downstream_write
+    output logic downstream_write,
+    output logic [7:0] way
 );
 logic hit, valid; //Copied from output signals
 logic dirty, cache_read, cache_load_en;
 logic downstream_address_sel, ld_wb, ld_LRU, new_dirty;
+logic wb_required;
 
 cache_datapath_core #(
     .s_offset(s_offset), .s_index(s_index), .s_way(s_way)) datapath
@@ -42,6 +44,7 @@ cache_datapath_core #(
     .ld_wb,
     .ld_LRU,
     .new_dirty,
+    .wb_required,
     .hit,
     .valid,
     .dirty,
@@ -55,7 +58,8 @@ cache_datapath_core #(
     .downstream_resp,
     .downstream_rdata,
     .downstream_wdata,
-    .downstream_address
+    .downstream_address,
+    .way
 );
 
 cache_control control
@@ -72,6 +76,7 @@ cache_control control
     .ld_wb,
     .ld_LRU,
     .new_dirty,
+    .wb_required,
 
     // Cache-CPU interface
     .upstream_read,
@@ -83,5 +88,12 @@ cache_control control
     .downstream_read,
     .downstream_write
 );
+
+
+always @(posedge clk) begin
+    if (downstream_write && downstream_address == 32'hd80) begin
+        $display("%0t L2 Writeback data: %h Way: %b", $time, downstream_wdata, way);
+    end
+end
     
 endmodule

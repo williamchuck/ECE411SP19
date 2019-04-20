@@ -4,14 +4,14 @@ timeunit 1ns;
 timeprecision 1ns;
 
 logic Clk, Run, X, ready;
-logic [31:0] mulA;
-logic [31:0] mulB;
-logic [31:0] Aval;
-logic [31:0] Bval;
+logic [32:0] mulA;
+logic [32:0] mulB;
+logic [32:0] Aval;
+logic [32:0] Bval;
 
 Multiplier mul(.*);
 
-logic [63:0] ans;
+logic [65:0] ans;
 assign ans = {Aval, Bval};
 
 always begin : CLOCK_GENERATION

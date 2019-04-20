@@ -2,14 +2,14 @@ module Multiplier
 (
     input logic Clk,
     input logic Run,
-    input logic [31:0] mulA, mulB,
-    output logic [31:0] Aval, Bval, 
+    input logic [32:0] mulA, mulB,
+    output logic [32:0] Aval, Bval, 
     output logic X,
     output logic ready
  );
 logic control_load, control_shift, control_subtract, control_clearALoadB; //control unit outputs during each state
 logic A_LSB, B_LSB;
-logic [31:0] Sum;
+logic [32:0] Sum;
 
 Control control_unit
 (
@@ -24,10 +24,10 @@ Control control_unit
     .ready
 );
 
-RegM_32 registerA
+RegM_33 registerA
 (
     .Clk(Clk),
-    .Reset(control_clearALoadB | init), //rgister A is 0'd when Reset is pressed or ClearA_LoadB is pressed
+    .Reset(control_clearALoadB), //rgister A is 0'd when Reset is pressed or ClearA_LoadB is pressed
     .Load(control_load), //register A loads when the output of the control unit (control load) is high 
     .D(Sum),
     .Shift_In(X), //registers A and B shift when the control unit tells them to, during the appropriate state
@@ -37,10 +37,10 @@ RegM_32 registerA
     .Shift_Out(A_LSB)
 );
 
-RegM_32 registerB
+RegM_33 registerB
 (
     .Clk(Clk),
-    .Reset(init),
+    .Reset(1'd0),
     .Load(control_clearALoadB), //register B only loads from switches when ClearA_LoadB is high 
     .D(mulB),
     .Shift_In(A_LSB), //digit in the LSB of A
@@ -50,7 +50,7 @@ RegM_32 registerB
     .Shift_Out(B_LSB)
 );
 
-Adder33bit adder
+Adder34bit adder
 (
     .Clk,
     .Switches(mulA),

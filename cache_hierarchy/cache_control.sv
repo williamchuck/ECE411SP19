@@ -13,6 +13,7 @@ module cache_control (
     output logic ld_wb,
     output logic ld_LRU,
     output logic new_dirty,
+    output logic wb_required,
 
     // Cache-CPU interface
     input logic upstream_read,
@@ -25,14 +26,12 @@ module cache_control (
     output logic downstream_write
 );
 
-logic wb_required;
-assign wb_required = ~hit & dirty;
-
 enum int unsigned { 
     IDLE, ACTION, WRITEBACK
 } state, next_state;
 
 always_comb begin : state_based_action
+    wb_required = 0;
     cache_read = 0;
     cache_load_en = 0;
     downstream_address_sel = 0;
@@ -53,6 +52,7 @@ always_comb begin : state_based_action
 
         ACTION: begin
             // downstream_read = ~(hit | downstream_resp);
+            wb_required = ~hit & dirty;
             downstream_read = ~hit;
             new_dirty = upstream_write;
             if (hit | downstream_resp) begin
@@ -70,6 +70,7 @@ always_comb begin : state_based_action
             downstream_address_sel = 1'b1;
             downstream_write = 1'b1;
             cache_read = 1'b0;
+            wb_required = 1'b0;
         end
         
         default: ;

@@ -37,7 +37,7 @@ always_comb begin
     
         IDLE : if (Execute) begin
             next_state = BEGIN;
-            nextCounter = 7'd32;
+            nextCounter = 7'd33;
         end
             
         LOAD: begin
