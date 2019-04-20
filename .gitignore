@@ -32,5 +32,7 @@ timing
 *.summary
 *.tcl
 *.txt
+# ignore testcode support files
 *.sh
 *.ld
+testcode/riscv_test_bin
