@@ -12,9 +12,13 @@ add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/imem_read
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/imem_rdata
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/imem_address
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/force_nop
+add wave -noupdate /urchin_tb/dut/cpu/control_hazard_stall
+add wave -noupdate /urchin_tb/dut/cpu/data_hazard_stall
+add wave -noupdate /urchin_tb/dut/cpu/imem_ready
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/br_en
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/PC/out
 add wave -noupdate -label ctw -radix hexadecimal /urchin_tb/dut/cpu/ctw
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/ctwmux_out
 add wave -noupdate -label ctw_EX -radix hexadecimal /urchin_tb/dut/cpu/ctw_EX
 add wave -noupdate -label ctw_MEM -radix hexadecimal /urchin_tb/dut/cpu/ctw_MEM
 add wave -noupdate -label ctw_WB -radix hexadecimal /urchin_tb/dut/cpu/ctw_WB
@@ -104,7 +108,7 @@ add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/dirty
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/wb_required
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/control/state
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {242304934 ps} 0}
+WaveRestoreCursors {{Cursor 1} {139396446 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 399
 configure wave -valuecolwidth 245
@@ -120,4 +124,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ps
 update
-WaveRestoreZoom {241900790 ps} {242157854 ps}
+WaveRestoreZoom {139353399 ps} {139460877 ps}
