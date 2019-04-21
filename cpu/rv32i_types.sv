@@ -71,49 +71,48 @@ typedef enum bit [1:0] {
     irl_half = 2'd3
 } ir_low_sel_t;
 
+typedef enum bit [1:0] {
+    cmpmux_rs2 = 2'd0,
+    cmpmux_imm = 2'd1,
+    cmpmux_zero = 2'd2
+} cmpmux_sel_t;
+
 typedef enum bit {
-    rs1_EX_sel = 1'd0,
-    pc_out_sel = 1'd1
+    alm1_rs1 = 1'd0,
+    alm1_pc = 1'd1
 } alumux1_sel_t;
 
-typedef enum bit [2:0] {
-    i_imm_sel = 4'd0,
-    u_imm_sel = 4'd1,
-    b_imm_sel = 4'd2,
-    s_imm_sel = 4'd3,
-    j_imm_sel = 4'd4,
-    c_addi4spn_uimm_sel = 4'd5;
-    c_addi16sp_imm_sel = 4'd6;
-    c_lsw_uimm_sel = 4'd7;
-    c_j_imm_sel = 4'd8;
-    ci_imm_sel = 4'd9;
-    ci_uimm_sel = 4'd10;
-    c_lui_imm_sel = 4'd11;
-    cb_imm_sel = 4'd12;
-    c_lwsp_uimm_sel = 4'd13;
-    c_swsp_uimm_sel = 4'd14;
-} alumux2_sel_t;
+typedef enum bit [3:0] {
+    imm_i = 4'd0,
+    imm_u = 4'd1,
+    imm_b = 4'd2,
+    imm_s = 4'd3,
+    imm_j = 4'd4,
+    cimm_u_addi4sp = 4'd5,
+    cimm_addi16sp = 4'd6,
+    cimm_u_lsw = 4'd7,
+    cimm_j = 4'd8,
+    cimm_i = 4'd9,
+    cimm_u = 4'd10,
+    cimm_lui = 4'd11,
+    cimm_b = 4'd12,
+    cimm_u_lwsp = 4'd13,
+    cimm_u_swsp = 4'd14
+} ctwimm_sel_t;
 
-// typedef enum bit [2:0] {
-//     i_imm_sel = 3'd0,
-//     u_imm_sel = 3'd1,
-//     b_imm_sel = 3'd2,
-//     s_imm_sel = 3'd3,
-//     j_imm_sel = 3'd4,
-//     rs2_EX_sel = 3'd5
-// } alumux2_sel_t;
-
-typedef enum bit {
-    imm_sel = 1'd0,
-    rs2_EX_sel = 1'd1
+typedef enum bit [1:0] {
+    alm2_imm = 2'd0,
+    alm2_rs2 = 2'd1,
+    alm2_zero = 2'd2
 } alumux2_sel_t;
 
 typedef enum bit [2:0] {
-    alu_out_wb_sel = 3'd0,
-    br_en_wb_sel = 3'd1,
-    imm_wb_sel = 3'd2,
-    rdata_wb_sel = 3'd3,
-    pc_inc_wb_sel = 3'd4
+    wbm_alu = 3'd0,
+    wbm_br = 3'd1,
+    wbm_imm = 3'd2,
+    wbm_rdata = 3'd3,
+    wbm_pc4 = 3'd4,
+    wbm_pc2 = 3'd5
 } wb_sel_t;
 
 typedef enum bit [2:0] {
@@ -168,7 +167,7 @@ typedef struct packed {
     logic load_regfile;
     logic dmem_read;
     logic dmem_write;
-    logic cmpmux_sel;
+    cmpmux_sel_t cmpmux_sel;
     logic [1:0] pcmux_sel;
     alumux1_sel_t alumux1_sel;
     wb_sel_t wbmux_sel;

@@ -57,6 +57,7 @@ set_global_assignment -name EDA_TEST_BENCH_RUN_SIM_FOR "10 us" -section_id urchi
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
 set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name SYSTEMVERILOG_FILE test/shadow_memory.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_core_pipelined.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_datapath_core.sv
 set_global_assignment -name SDC_FILE urchin.out.sdc

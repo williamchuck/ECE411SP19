@@ -43,57 +43,9 @@ end
 /* Clock generator */
 always #5 clk = ~clk;
 
-// always @(posedge clk)
-// begin
-//     if (cpu.control.error == 1'd1) begin
-//         $finish;
-//     end
-//     // if (dmem_address <= 32'h00000b00 && dmem_write) begin
-//     //     $display("Writing data to imem");
-//     //     $finish;
-//     // end
-//     if (pmem_write & pmem_resp) begin
-//         write_address = pmem_address[31:5];
-//         write_data = pmem_wdata;
-//         write = 1;
-//     end else begin
-//         write_address = 27'hx;
-//         write_data = 256'hx;
-//         write = 0;
-//     end
-//     if (pm_error) begin
-//         halt = 1;
-//         $display("Halting with error!");
-//         $finish;
-//     end else 
-//     if (cpu.no_mem & ~cpu.stall & (cpu.pc_out == cpu.pcmux_out))
-//     begin
-//         halt = 1;
-//         $display("Halting without error");
-//         $finish;
-//     end
-//     if (cpu.no_mem & ~cpu.stall) order = order + 1;
-// end
-
-
 urchin dut(
     .*
 );
-
-// cpu_datapath cpu
-// (
-//     .*
-// );
-
-// cache_hierarchy cache
-// (
-//     .*
-// );
-
-// magic_memory_dp mem
-// (
-//     .*
-// );
 
 physical_memory memory(
     .clk,
@@ -105,15 +57,6 @@ physical_memory memory(
     .error(pm_error),
     .rdata(pmem_rdata)
 );
-
-// always @(posedge clk) begin
-//     if (pmem_address == 32'hd80 && pmem_write) begin
-//         $display("%0t pmem Writing to d80 %h", $time, pmem_wdata);
-//     end
-//     if (pmem_address == 32'hd80 && pmem_read) begin
-//         $display("%0t pmem Reading from d80 %h", $time, pmem_rdata);
-//     end
-// end
 
 shadow_memory sm
 (
