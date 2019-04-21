@@ -17,6 +17,7 @@ enum logic [4:0]
     BEGIN,
     LOAD,
     SHIFT,
+    LASTLOADDIV,
     DONE
 } curr_state, next_state; 
 
@@ -38,9 +39,6 @@ always_comb begin
     
         IDLE : if (Execute) begin
             next_state = BEGIN;
-            if(div)
-                nextCounter = 7'd34;
-            else
                 nextCounter = 7'd33;
         end
             
@@ -55,10 +53,15 @@ always_comb begin
         
         SHIFT : begin
             if(counter == 7'd0)
-                next_state = DONE;
+                if(div)
+                    next_state = LASTLOADDIV;
+                else
+                    next_state = DONE;
             else
                 next_state = LOAD;
         end
+
+        LASTLOADDIV: next_state = DONE;
         
         default: next_state = IDLE;
         
@@ -77,7 +80,7 @@ always_comb begin
             clearAloadB = 1'd1;
         end
     
-        LOAD: begin
+        LOAD, LASTLOADDIV: begin
             Subtract = !nextCounter & m;
             Load = 1'd1;
         end
