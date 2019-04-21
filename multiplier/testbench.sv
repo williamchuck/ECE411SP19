@@ -8,6 +8,8 @@ logic [32:0] opA;
 logic [32:0] opB;
 logic [32:0] Aval;
 logic [32:0] Bval;
+logic [65:0] multAns;
+assign multAns = {Aval, Bval};
 logic div;
 Multiplier mul(.*);
 
@@ -23,12 +25,10 @@ initial begin: CLOCK_INITIALIZATION
 end 
 
 initial begin: TEST_VECTORS
-Run = 0;
-div = 0;
-opA = 12;
-opB = 4;
-
-#10
 Run = 1;
+div = 1;
+opA = 5523;
+opB = -23;
+
 end
 endmodule

@@ -5,12 +5,11 @@ add wave -noupdate -radix hexadecimal /testbench/mul/Clk
 add wave -noupdate -radix hexadecimal /testbench/mul/Run
 add wave -noupdate -radix hexadecimal /testbench/mul/div
 add wave -noupdate -radix hexadecimal /testbench/mul/ready
-add wave -noupdate -radix hexadecimal /testbench/mul/opA
-add wave -noupdate -radix hexadecimal /testbench/mul/opB
-add wave -noupdate -radix hexadecimal /testbench/mul/Aval
-add wave -noupdate -radix hexadecimal /testbench/mul/Bval
-add wave -noupdate -radix hexadecimal /testbench/mul/divisor
-add wave -noupdate -radix decimal /testbench/ans
+add wave -noupdate -radix decimal /testbench/mul/opA
+add wave -noupdate -radix decimal /testbench/mul/opB
+add wave -noupdate -radix decimal /testbench/mul/Aval
+add wave -noupdate -radix decimal /testbench/mul/Bval
+add wave -noupdate -radix decimal /testbench/multAns
 add wave -noupdate /testbench/mul/control_unit/curr_state
 add wave -noupdate -radix decimal /testbench/mul/control_unit/counter
 add wave -noupdate -radix hexadecimal /testbench/mul/Sum
@@ -44,4 +43,4 @@ configure wave -timelineunits ns
 update
 WaveRestoreZoom {0 ps} {351554 ps}
 restart -f
-run 700 ns
+run 2us

@@ -10,7 +10,13 @@ module Multiplier
  );
 logic control_load, control_shift, control_subtract, control_clearALoadB; //control unit outputs during each state
 logic A_R_out, B_R_out, A_L_out, B_L_out;
+logic flipsign;
 logic [32:0] Sum;
+logic [32:0] opA_Abs;
+logic [32:0] opB_Abs;
+
+assign opA_Abs = opA[32] ? -opA : opA;
+assign opB_Abs = opB[32] ? -opB : opB;
 
 Control control_unit
 (
@@ -18,11 +24,13 @@ Control control_unit
     .Execute(Run),
     .m(B_R_out),
     .div,
+    .differentSigns(opA[32] != opB[32]),
     //based on the above inputs, the control calculates the following for each state:
     .Load(control_load),
     .Shift(control_shift),
     .Subtract(control_subtract),
     .clearAloadB(control_clearALoadB),
+    .flipsign,
     .ready
 );
 
@@ -30,8 +38,8 @@ RegM_33 registerA
 (
     .Clk,
     .Reset(control_clearALoadB), //rgister A is 0'd when Reset is pressed or ClearA_LoadB is pressed
-    .Load( (~div & control_load) | (div & ~Sum[32] & control_load)), //register A loads when the output of the control unit (control load) is high 
-    .D(Sum),
+    .Load( (~div & control_load) | (div & ~Sum[32] & control_load) | flipsign), //register A loads when the output of the control unit (control load) is high 
+    .D(flipsign ? -Aval : Sum),
     .ShiftR_In(X), //registers A and B shift when the control unit tells them to, during the appropriate state
     .ShiftR_En(~div & control_shift),
     .ShiftL_In(B_L_out),
@@ -46,11 +54,11 @@ RegM_33 registerB
 (
     .Clk,
     .Reset(1'd0),
-    .Load(control_clearALoadB), //register B only loads from switches when ClearA_LoadB is high 
-    .D(div ? opA : opB),
+    .Load(control_clearALoadB | flipsign), //register B only loads from switches when ClearA_LoadB is high 
+    .D(flipsign ? -Bval : (div ? opA_Abs : opB)),
     .ShiftR_In(A_R_out), //digit in the LSB of A
     .ShiftR_En(~div & control_shift),
-    .ShiftL_In({Aval[31:0], Bval[32]} >= opB),
+    .ShiftL_In({Aval[31:0], Bval[32]} >= opB_Abs),
     .ShiftL_En(div & control_shift),
     //below are the outputs
     .Data_Out(Bval),
@@ -61,7 +69,7 @@ RegM_33 registerB
 Adder34bit adder
 (
     .Clk,
-    .Switches(div ? opB : opA),
+    .Switches(div ? opB_Abs : opA),
     .A(Aval),
     .sub(div | control_subtract), //control_subtract is high when its the last shift and the multiplicand is <0 
     .outputEnable(div | (~div & B_R_out)), //when the LSB of B is zero, we should not add

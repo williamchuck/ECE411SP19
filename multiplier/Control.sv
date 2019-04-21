@@ -4,20 +4,22 @@ module Control
     input logic Execute,
     input logic m,
     input logic div,
+    input logic differentSigns,
     output logic Load,
     output logic Shift,
     output logic Subtract,
     output logic clearAloadB,
+    output logic flipsign,
     output logic ready
 );
 //NOTE, We are assumming Execute is active high
 enum logic [4:0]
 {
     IDLE,
-    BEGIN,
     LOAD,
     SHIFT,
     LASTLOADDIV,
+    FLIPSIGN,
     DONE
 } curr_state, next_state; 
 
@@ -35,11 +37,11 @@ always_comb begin
     nextCounter = counter;
     
     unique case (curr_state)
-        BEGIN: next_state = LOAD;
     
-        IDLE : if (Execute) begin
-            next_state = BEGIN;
-                nextCounter = 7'd33;
+        IDLE, DONE :begin
+            if (Execute)
+                next_state = LOAD;
+            nextCounter = 7'd33;
         end
             
         LOAD: begin
@@ -61,7 +63,16 @@ always_comb begin
                 next_state = LOAD;
         end
 
-        LASTLOADDIV: next_state = DONE;
+        LASTLOADDIV: begin
+            if(differentSigns)
+                next_state = FLIPSIGN;
+            else
+                next_state = DONE;
+        end
+
+        FLIPSIGN : begin
+            next_state = DONE;
+        end
         
         default: next_state = IDLE;
         
@@ -71,18 +82,19 @@ always_comb begin
     Load  = 1'd0;
     Subtract = 1'd0;
     clearAloadB = 1'b0;
+    flipsign = 1'd0;
     ready = 1'd0;
     
     // Assign outputs based on ‘state’
     case (curr_state)
-        BEGIN: begin
-            Load = 1'd1;
-            clearAloadB = 1'd1;
-        end
     
         LOAD, LASTLOADDIV: begin
             Subtract = !nextCounter & m;
             Load = 1'd1;
+        end
+
+        FLIPSIGN: begin
+            flipsign = 1'd1;
         end
 
         SHIFT: begin
@@ -91,10 +103,14 @@ always_comb begin
         end
 
         IDLE: begin
+            Load = 1'd1;
+            clearAloadB = 1'd1;
         end
         
         DONE: begin
             ready = 1'd1;
+            Load = 1'd1;
+            clearAloadB = 1'd1;
         end
 
        default: ; //default case, can also have default assignments for Ld_A and Ld_B before case
