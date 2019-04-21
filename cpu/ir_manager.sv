@@ -1,9 +1,12 @@
+import rv32i_types::*;
+
 module ir_manager (
     input logic clk,
     input logic j,
-    input logic [31:0] pc
+    input logic pipe,
+    input logic [31:0] pc,
     input logic [31:0] imem_rdata,
-    output logic [31:0] ir_in,
+    output logic [31:0] ir,
     output logic ir_stall
 );
 
@@ -11,10 +14,13 @@ logic [15:0] half_instr, _half_instr, low_full_instr, _low_full_instr;
 logic with_half, _with_half, with_low_full, _with_low_full;
 logic load_low_full, load_half;
 
+ir_high_sel_t irh_sel;
+ir_low_sel_t irl_sel;
+
 register #(33) low_full_reg
 (
     .clk,
-    .load(load_low_full),
+    .load(load_low_full & pipe),
     .in({_with_low_full, _low_full_instr}),
     .out({with_low_full, low_full_instr})
 );
@@ -22,10 +28,30 @@ register #(33) low_full_reg
 register #(33) half_reg
 (
     .clk,
-    .load(load_half),
+    .load(load_half & pipe),
     .in({_with_half, _half_instr}),
     .out({with_half, half_instr})
 );
+
+assign _half_instr = imem_rdata[31:16];
+assign _low_full_instr = imem_rdata[31:16];
+
+always_comb begin
+    case(irl_sel)
+        irl_one: ir[15:0] = 16'hffff;
+        irl_rdata_low: ir[15:0] = imem_rdata[15:0];
+        irl_low_full: ir[15:0] = low_full_instr;
+        irl_half: ir[15:0] = half_instr;
+        default: ir[15:0] = 16'hffff;
+    endcase
+
+    case(irh_sel)
+        irh_one: ir[31:16] = 16'hffff;
+        irh_rdata_low: ir[31:16] = imem_rdata[15:0];
+        irh_rdata_high: ir[31:16] = imem_rdata[31:16];
+        default: ir[31:16] = 16'hffff;
+    endcase
+end
 
 always_comb begin
     // Default buffer update values
@@ -33,6 +59,10 @@ always_comb begin
     load_half = 1'b0;
     _with_half = 1'b0;
     _with_low_full = 1'b0;
+
+    ir_stall = 1'b0;
+    irl_sel = irl_one;
+    irh_sel = irh_one;
 
     if ((j & ~pc[1]) | (~with_half & ~with_low_full)) begin
         irl_sel = irl_rdata_low;

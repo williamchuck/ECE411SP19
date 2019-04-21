@@ -59,9 +59,9 @@ typedef enum bit [4:0] {
 } rv32ic_opcode;
 
 typedef enum bit [1:0] { 
-    irh_one = 1'd0,
-    irh_rdata_high = 2'd1
-    irh_rdata_low = 2'd2
+    irh_one = 2'd0,
+    irh_rdata_low = 2'd1,
+    irh_rdata_high = 2'd2
 } ir_high_sel_t;
 
 typedef enum bit [1:0] { 
@@ -77,18 +77,41 @@ typedef enum bit {
 } alumux1_sel_t;
 
 typedef enum bit [2:0] {
-    i_imm_sel = 3'd0,
-    u_imm_sel = 3'd1,
-    b_imm_sel = 3'd2,
-    s_imm_sel = 3'd3,
-    j_imm_sel = 3'd4,
-    rs2_EX_sel = 3'd5
+    i_imm_sel = 4'd0,
+    u_imm_sel = 4'd1,
+    b_imm_sel = 4'd2,
+    s_imm_sel = 4'd3,
+    j_imm_sel = 4'd4,
+    c_addi4spn_uimm_sel = 4'd5;
+    c_addi16sp_imm_sel = 4'd6;
+    c_lsw_uimm_sel = 4'd7;
+    c_j_imm_sel = 4'd8;
+    ci_imm_sel = 4'd9;
+    ci_uimm_sel = 4'd10;
+    c_lui_imm_sel = 4'd11;
+    cb_imm_sel = 4'd12;
+    c_lwsp_uimm_sel = 4'd13;
+    c_swsp_uimm_sel = 4'd14;
+} alumux2_sel_t;
+
+// typedef enum bit [2:0] {
+//     i_imm_sel = 3'd0,
+//     u_imm_sel = 3'd1,
+//     b_imm_sel = 3'd2,
+//     s_imm_sel = 3'd3,
+//     j_imm_sel = 3'd4,
+//     rs2_EX_sel = 3'd5
+// } alumux2_sel_t;
+
+typedef enum bit {
+    imm_sel = 1'd0,
+    rs2_EX_sel = 1'd1
 } alumux2_sel_t;
 
 typedef enum bit [2:0] {
     alu_out_wb_sel = 3'd0,
     br_en_wb_sel = 3'd1,
-    u_imm_wb_sel = 3'd2,
+    imm_wb_sel = 3'd2,
     rdata_wb_sel = 3'd3,
     pc_inc_wb_sel = 3'd4
 } wb_sel_t;
@@ -154,6 +177,7 @@ typedef struct packed {
     logic [6:0] funct7;
     logic [31:0] pc;
     logic [31:0] ir;
+    logic [31:0] imm;
     logic [4:0] rs1;
     logic [4:0] rs2;
     logic [4:0] rd;

@@ -75,6 +75,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE cpu/hdu.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cpu/fwu.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cpu/cpu_datapath.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cpu/cpu_control.sv
+set_global_assignment -name SYSTEMVERILOG_FILE cpu/ir_manager.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/transformer.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/lru_manager.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy/cache_core.sv
