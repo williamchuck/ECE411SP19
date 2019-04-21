@@ -141,6 +141,8 @@ goodend:
 badend:
     jal  x0, badend
 
+
+.align 4
 .section .rodata
 
 LVAL1:	    .word 0xffffffff

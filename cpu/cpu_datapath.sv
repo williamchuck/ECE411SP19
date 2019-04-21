@@ -34,21 +34,18 @@ module cpu_datapath (
     output logic WB_load
 );
 
-logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, pc_out_WB;
+logic [31:0] true_pc, pc_out, pcmux_out, pc_out_ID;
 
-logic pipe;
+logic pipe1, pipe2, pipe3, pipe4;
 logic load_regfile;
 logic rs1_out_sel, rs2_out_sel;
 logic [1:0] rs1_out_EX_sel, rs2_out_EX_sel;
-// logic [4:0] rs1, rs2, rd;
-// logic [4:0] rs1_EX, rs2_EX;
-// logic [4:0] rd_EX, rd_MEM, rd_WB;
-rv32i_word ir_out, ir_out_EX, ir_out_MEM, ir_out_WB;
+// rv32i_word ir_out, ir_out_EX, ir_out_MEM, ir_out_WB, ir;
+rv32i_word ir;
 rv32i_word rs1_out, rs2_out, regfile_in_WB, regfile_in_MEM, alumux1_out, alumux2_out;
 rv32i_word rs1_out_EX, rs2_out_EX, rs2_out_MEM;
 
 logic [31:0] buffer_branch_target, branch_target;
-
 
 /// MARK: - Components in IF stage
 
@@ -58,32 +55,34 @@ assign imem_wdata = 32'h00000000;
 assign imem_read = 1'b1;//imem_permit;
 
 logic [31:0] dmem_wdata_unshifted;
-logic data_hazard_stall, control_hazard_stall;
-logic pcmux_sel, br_en, br_en_MEM, br_en_WB;
+logic data_hazard_stall, control_hazard_stall, ir_stall;
+logic pcmux_sel, pcmux_sel_IF, pcmux_sel_ID, br_en, br_en_MEM, br_en_WB;
 logic [31:0] cmpmux_out, alu_out, alu_out_WB, alu_out_MEM;
 logic [31:0] dmem_rdata_WB;
 rv32i_control_word ctw, ctwmux_out, ctw_EX, ctw_MEM, ctw_WB;
 
 logic control_hazard_1_bit, control_hazard_2_bit, jump;
 
-assign pipe = ~data_hazard_stall & dmem_resp & imem_resp;
+assign pipe1 = ~data_hazard_stall & imem_resp & ~ir_stall & dmem_resp;
+assign pipe2 = ~data_hazard_stall & ~ir_stall & dmem_resp;
+assign pipe3 = ~data_hazard_stall & dmem_resp;
 
 assign imem_address = pc_out;
 pc_register PC
 (
     .clk,
-    .load(pipe),
+    .load(pipe1),
     .in(pcmux_out),
     .out(pc_out)
 );
 
-assign pcmux_out = pcmux_sel ? branch_target : pc_out + 32'd4;
+assign pcmux_out = pcmux_sel ? branch_target : (pc_out & 32'hfffffffc) + 32'd4;
 assign branch_target = jump ? alu_out : buffer_branch_target;
 
 /// MARK: - Components in ID stage
 
 logic force_nop;
-assign ir_out = force_nop ? 32'd0 : imem_rdata;
+// assign ir_out = force_nop ? 32'hffffffff : ir;
 assign ctwmux_out = force_nop ? {$bits(ctwmux_out){1'b0}} : ctw;
 
 always_comb begin
@@ -110,21 +109,33 @@ logic [31:0] selected_rs1_out, selected_rs2_out;
 assign selected_rs1_out = rs1_out_sel ? regfile_in_WB : rs1_out;
 assign selected_rs2_out = rs2_out_sel ? regfile_in_WB : rs2_out;
 
-control_rom control (
-    .ir(imem_rdata),
+ir_manager irm
+(
+    .clk,
+    .j(pcmux_sel_ID),
+    .ready(imem_ready),
+    .hazard(data_hazard_stall | ~dmem_resp),
     .pc(pc_out_ID),
+    .true_pc,
+    .imem_rdata,
+    .ir,
+    .ir_stall
+);
+
+control_rom control (
+    .ir,
+    .pc(true_pc),
     .ctw
-    // .rs1,
-    // .rs2,
-    // .rd
 );
 
 hdu hdu
 (
     .dmem_read_EX(ctw_EX.dmem_read),
+    .dmem_read_MEM(ctw_MEM.dmem_read),
     .rs1(ctw.rs1),
     .rs2(ctw.rs2),
     .rd_EX(ctw_EX.rd),
+    .rd_MEM(ctw_MEM.rd),
     .stall(data_hazard_stall)
 );
 
@@ -147,24 +158,24 @@ fwu fwu
 register #(1) control_hazard_1
 (
     .clk,
-    .load(ctw_EX.opcode != op_nop | pipe),
-    .in(~pipe & pcmux_sel),
+    .load(ctw_EX.opcode != op_nop | pipe1),
+    .in(~pipe1 & pcmux_sel),
     .out(control_hazard_1_bit)
 );
 
 register #(1) control_hazard_2
 (
     .clk,
-    .load(pipe),
-    .in((pipe & pcmux_sel) | control_hazard_1_bit),
+    .load(pipe1),
+    .in((pipe1 & pcmux_sel) | control_hazard_1_bit),
     .out(control_hazard_2_bit)
 );
 
 register branch_target_buffer
 (
     .clk,
-    .load(ctw_EX.opcode != op_nop | pipe),
-    .in(alu_out),
+    .load(ctw_EX.opcode != op_nop | pipe1),
+    .in(branch_target),
     .out(buffer_branch_target)
 );
 
@@ -175,14 +186,9 @@ register branch_target_buffer
 
 assign control_hazard_stall = jump | control_hazard_1_bit | control_hazard_2_bit;
 
-// assign force_nop = (ctw_EX.opcode == op_br && br_en) | (ctw_MEM.opcode == op_br && br_en_MEM) | ~imem_ready;
 assign force_nop = (data_hazard_stall | control_hazard_stall | ~imem_ready);
 
 /// MARK: - Components in EX stage
-
-// assign rs1_EX = ir_out_EX[19:15];
-// assign rs2_EX = ir_out_EX[24:20];
-// assign rd_EX = ir_out_EX[11:7];
 
 // Note that alumux1_sel and alumux2_sel are computed by FWU.
 assign jump = ctw_EX.pcmux_sel[1] ? br_en : ctw_EX.pcmux_sel[0];
@@ -207,27 +213,24 @@ always_comb begin : rs1_2_sel
     endcase
 end
 
-rv32i_word i_imm, s_imm, b_imm, u_imm, j_imm;
-assign i_imm = {{21{ir_out_EX[31]}}, ir_out_EX[30:20]};
-assign s_imm = {{21{ir_out_EX[31]}}, ir_out_EX[30:25], ir_out_EX[11:7]};
-assign b_imm = {{20{ir_out_EX[31]}}, ir_out_EX[7], ir_out_EX[30:25], ir_out_EX[11:8], 1'b0};
-assign u_imm = {ir_out_EX[31:12], 12'h000};
-assign j_imm = {{12{ir_out_EX[31]}}, ir_out_EX[19:12], ir_out_EX[20], ir_out_EX[30:21], 1'b0};
+// rv32i_word i_imm, s_imm, b_imm, u_imm, j_imm;
+// assign i_imm = {{21{ir_out_EX[31]}}, ir_out_EX[30:20]};
+// assign s_imm = {{21{ir_out_EX[31]}}, ir_out_EX[30:25], ir_out_EX[11:7]};
+// assign b_imm = {{20{ir_out_EX[31]}}, ir_out_EX[7], ir_out_EX[30:25], ir_out_EX[11:8], 1'b0};
+// assign u_imm = {ir_out_EX[31:12], 12'h000};
+// assign j_imm = {{12{ir_out_EX[31]}}, ir_out_EX[19:12], ir_out_EX[20], ir_out_EX[30:21], 1'b0};
 
 always_comb begin : alumux1_2_selection
     case(ctw_EX.alumux1_sel)
-        rs1_EX_sel: alumux1_out = selected_rs1_EX_out;
-        pc_out_sel: alumux1_out = ctw_EX.pc;
+        alm1_rs1: alumux1_out = selected_rs1_EX_out;
+        alm1_pc: alumux1_out = ctw_EX.pc;
         default: alumux1_out = 32'dX;
     endcase
 
     case(ctw_EX.alumux2_sel)
-        i_imm_sel: alumux2_out = i_imm;
-        u_imm_sel: alumux2_out = u_imm;
-        b_imm_sel: alumux2_out = b_imm;
-        s_imm_sel: alumux2_out = s_imm;
-        j_imm_sel: alumux2_out = j_imm;
-        rs2_EX_sel: alumux2_out = selected_rs2_EX_out;
+        alm2_imm: alumux2_out = ctw_EX.imm;
+        alm2_rs2: alumux2_out = selected_rs2_EX_out;
+        alm2_zero: alumux2_out = 32'd0;
         default: alumux2_out = 32'dX;
     endcase
 end
@@ -240,7 +243,14 @@ alu alu
     .f(alu_out)
 );
 
-assign cmpmux_out = ctw_EX.cmpmux_sel ? i_imm : selected_rs2_EX_out;
+always_comb begin
+    case(ctw_EX.cmpmux_sel)
+        cmpmux_imm: cmpmux_out = ctw_EX.imm;
+        cmpmux_rs2: cmpmux_out = selected_rs2_EX_out;
+        cmpmux_zero: cmpmux_out = 32'd0;
+        default: cmpmux_out = 32'dX;
+    endcase
+end
 
 compare cmp
 (
@@ -250,7 +260,7 @@ compare cmp
     .br_en
 );
 
-assign EX_ins_valid = ctw_EX.opcode != op_nop;
+assign EX_ins_valid = ctw_EX.opcode != op_nop && ctw_EX.opcode != 0;
 assign EX_ir = ctw_EX.ir;
 assign EX_pc = ctw_EX.pc;
 
@@ -363,11 +373,13 @@ end
 
 always_comb begin
     case(ctw_MEM.wbmux_sel)
-        alu_out_wb_sel: regfile_in_MEM = alu_out_MEM;
-        br_en_wb_sel: regfile_in_MEM = {31'b0, br_en_MEM};
-        u_imm_wb_sel: regfile_in_MEM = u_imm;
-        rdata_wb_sel: regfile_in_MEM = 32'd0;
-        pc_inc_wb_sel: regfile_in_MEM = pc_out_MEM + 4;
+        wbm_alu: regfile_in_MEM = alu_out_MEM;
+        wbm_br: regfile_in_MEM = {31'b0, br_en_MEM};
+        // u_wbm_imm: regfile_in_MEM = u_imm;
+        wbm_imm: regfile_in_MEM = ctw_MEM.imm;
+        wbm_rdata: regfile_in_MEM = 32'd0;
+        wbm_pc4: regfile_in_MEM = ctw_MEM.pc + 4;
+        wbm_pc2: regfile_in_MEM = ctw_MEM.pc + 2;
         default: regfile_in_MEM = 32'bX;
     endcase
 end
@@ -378,55 +390,66 @@ assign WB_load = ctw_WB.opcode == op_load;
 
 always_comb begin
     case(ctw_WB.wbmux_sel)
-        alu_out_wb_sel: regfile_in_WB = alu_out_WB;
-        br_en_wb_sel: regfile_in_WB = {31'b0, br_en_WB};
-        u_imm_wb_sel: regfile_in_WB = u_imm;
-        rdata_wb_sel: regfile_in_WB = dmem_rdata_shifted;
-        pc_inc_wb_sel: regfile_in_WB = pc_out_WB + 4;
+        wbm_alu: regfile_in_WB = alu_out_WB;
+        wbm_br: regfile_in_WB = {31'b0, br_en_WB};
+        // u_wbm_imm: regfile_in_WB = u_imm;
+        wbm_imm: regfile_in_WB = ctw_WB.imm;
+        wbm_rdata: regfile_in_WB = dmem_rdata_shifted;
+        wbm_pc4: regfile_in_WB = ctw_WB.pc + 4;
+        wbm_pc2: regfile_in_WB = ctw_WB.pc + 2;
         default: regfile_in_WB = 32'bX;
     endcase
 end
 
-/// MARK: - IF/ID pipeline register
-
-register IF_ID_pc
+/// MARK: - PC/IF pipeline register
+register #(1) PC_IF_pcmux_sel
 (
     .clk,
-    .load(pipe),
-    .in(pc_out),
-    .out(pc_out_ID)
+    .load(pipe1),
+    .in(pcmux_sel),
+    .out(pcmux_sel_IF)
 );
 
-assign imem_stall = ~(~data_hazard_stall && dmem_resp);
+/// MARK: - IF/ID pipeline register
+
+register #(33) IF_ID_pc
+(
+    .clk,
+    .load(pipe1),
+    .in({pc_out, pcmux_sel_IF}),
+    .out({pc_out_ID, pcmux_sel_ID})
+);
+
+assign imem_stall = ~pipe2;
 
 /// MARK: - ID/EX pipeline register
 
-register #(4*32+$bits(rv32i_control_word)) ID_EX_pipeline
+register #(2*32+$bits(rv32i_control_word)) ID_EX_pipeline
 (
     .clk,
     .load(dmem_resp),
-    .in({ir_out, ctwmux_out, pc_out_ID, selected_rs1_out, selected_rs2_out}),
-    .out({ir_out_EX, ctw_EX, pc_out_EX, rs1_out_EX, rs2_out_EX})
+    .in({ctwmux_out, selected_rs1_out, selected_rs2_out}),
+    .out({ctw_EX, rs1_out_EX, rs2_out_EX})
 );
 
 /// MARK: - EX/MEM pipeline register
 
-register #($bits(rv32i_control_word)+4*32+1) EX_MEM_pipeline
+register #($bits(rv32i_control_word)+2*32+1) EX_MEM_pipeline
 (
     .clk,
     .load(dmem_resp),
-    .in({ctw_EX, selected_rs2_EX_out, alu_out, pc_out_EX, ir_out_EX, br_en}),
-    .out({ctw_MEM, rs2_out_MEM, alu_out_MEM, pc_out_MEM, ir_out_MEM, br_en_MEM})
+    .in({ctw_EX, selected_rs2_EX_out, alu_out, br_en}),
+    .out({ctw_MEM, rs2_out_MEM, alu_out_MEM, br_en_MEM})
 );
 
 /// MARK: - MEM/WB pipeline register
 
-register #($bits(rv32i_control_word)+32*4+1 + 32) MEM_WB_pipeline
+register #($bits(rv32i_control_word)+32*2+1 + 32) MEM_WB_pipeline
 (
     .clk,
     .load(dmem_resp),
-    .in({ctw_MEM, alu_out_MEM, dmem_address_untruncated, pc_out_MEM, ir_out_MEM, br_en_MEM, dmem_address}),
-    .out({ctw_WB, alu_out_WB, dmem_address_untruncated_WB, pc_out_WB, ir_out_WB, br_en_WB, dmem_address_WB})
+    .in({ctw_MEM, alu_out_MEM, dmem_address_untruncated, br_en_MEM, dmem_address}),
+    .out({ctw_WB, alu_out_WB, dmem_address_untruncated_WB, br_en_WB, dmem_address_WB})
 );
 
 assign dmem_stall = 1'd0;
