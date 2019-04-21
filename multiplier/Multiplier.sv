@@ -54,8 +54,8 @@ RegM_33 registerB
 (
     .Clk,
     .Reset(1'd0),
-    .Load(control_clearALoadB | flipsign), //register B only loads from switches when ClearA_LoadB is high 
-    .D(flipsign ? -Bval : (div ? opA_Abs : opB)),
+    .Load(control_clearALoadB | (flipsign & (opB != 0))), //register B only loads from switches when ClearA_LoadB is high 
+    .D((flipsign & (opB != 0)) ? -Bval : (div ? opA_Abs : opB)),
     .ShiftR_In(A_R_out), //digit in the LSB of A
     .ShiftR_En(~div & control_shift),
     .ShiftL_In({Aval[31:0], Bval[32]} >= opB_Abs),

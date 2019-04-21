@@ -26,9 +26,9 @@ end
 
 initial begin: TEST_VECTORS
 Run = 1;
-div = 1;
-opA = 5523;
-opB = -23;
+div = 0;
+opA = 0;
+opB = 500;
 
 end
 endmodule
