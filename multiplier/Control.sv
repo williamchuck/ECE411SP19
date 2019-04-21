@@ -3,6 +3,7 @@ module Control
     input logic Clk,
     input logic Execute,
     input logic m,
+    input logic div,
     output logic Load,
     output logic Shift,
     output logic Subtract,
@@ -37,7 +38,10 @@ always_comb begin
     
         IDLE : if (Execute) begin
             next_state = BEGIN;
-            nextCounter = 7'd33;
+            if(div)
+                nextCounter = 7'd34;
+            else
+                nextCounter = 7'd33;
         end
             
         LOAD: begin

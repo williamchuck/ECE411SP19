@@ -3,11 +3,13 @@ onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate -radix hexadecimal /testbench/mul/Clk
 add wave -noupdate -radix hexadecimal /testbench/mul/Run
+add wave -noupdate -radix hexadecimal /testbench/mul/div
 add wave -noupdate -radix hexadecimal /testbench/mul/ready
-add wave -noupdate -radix hexadecimal /testbench/mul/mulA
-add wave -noupdate -radix hexadecimal /testbench/mul/mulB
+add wave -noupdate -radix hexadecimal /testbench/mul/opA
+add wave -noupdate -radix hexadecimal /testbench/mul/opB
 add wave -noupdate -radix hexadecimal /testbench/mul/Aval
 add wave -noupdate -radix hexadecimal /testbench/mul/Bval
+add wave -noupdate -radix hexadecimal /testbench/mul/divisor
 add wave -noupdate -radix decimal /testbench/ans
 add wave -noupdate /testbench/mul/control_unit/curr_state
 add wave -noupdate -radix decimal /testbench/mul/control_unit/counter

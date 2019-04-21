@@ -4,11 +4,11 @@ timeunit 1ns;
 timeprecision 1ns;
 
 logic Clk, Run, X, ready;
-logic [32:0] mulA;
-logic [32:0] mulB;
+logic [32:0] opA;
+logic [32:0] opB;
 logic [32:0] Aval;
 logic [32:0] Bval;
-
+logic div;
 Multiplier mul(.*);
 
 logic [65:0] ans;
@@ -24,8 +24,9 @@ end
 
 initial begin: TEST_VECTORS
 Run = 0;
-mulA = -10;
-mulB = -22;
+div = 1;
+opA = 7;
+opB = 2;
 
 #10
 Run = 1;
