@@ -319,7 +319,7 @@ GetOverHere:
 END_m:
     jalr x0, x1, 0
 
-
+.align 4
 ZERO:   .word 0x00000000
 ZOOP :  .word 0x0000700F
 BEAD :  .word 0xBEADBEAD
@@ -529,6 +529,7 @@ GetHere:
 
     beq x0, x0, MoneyMoney
 
+.align 4
 BlackHole:  .word 0
 WormHole:   .word 0
 LdThis:     .word 0xabdaabda
@@ -822,8 +823,9 @@ LoopRowsD:
 
 
 .section .rodata
+.align 4
 
-XX1:             .word    0x00000000
+XX1:            .word    0x00000000
 Y1:             .word    0x00000000
 X2:             .word    0x00000000
 Y2:             .word    0x00000000

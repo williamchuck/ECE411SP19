@@ -34,7 +34,7 @@ module cpu_datapath (
     output logic WB_load
 );
 
-logic [31:0] pc_out, pc_out_MEM, pcmux_out, pc_out_ID, pc_out_EX, pc_out_WB;
+logic [31:0] true_pc, pc_out, pcmux_out, pc_out_ID;
 
 logic pipe1, pipe2, pipe3, pipe4;
 logic load_regfile;
@@ -114,7 +114,9 @@ ir_manager irm
     .clk,
     .j(pcmux_sel_ID),
     .ready(imem_ready),
+    .hazard(data_hazard_stall | ~dmem_resp),
     .pc(pc_out_ID),
+    .true_pc,
     .imem_rdata,
     .ir,
     .ir_stall
@@ -122,16 +124,18 @@ ir_manager irm
 
 control_rom control (
     .ir,
-    .pc(pc_out_ID),
+    .pc(true_pc),
     .ctw
 );
 
 hdu hdu
 (
     .dmem_read_EX(ctw_EX.dmem_read),
+    .dmem_read_MEM(ctw_MEM.dmem_read),
     .rs1(ctw.rs1),
     .rs2(ctw.rs2),
     .rd_EX(ctw_EX.rd),
+    .rd_MEM(ctw_MEM.rd),
     .stall(data_hazard_stall)
 );
 
@@ -171,7 +175,7 @@ register branch_target_buffer
 (
     .clk,
     .load(ctw_EX.opcode != op_nop | pipe1),
-    .in(alu_out),
+    .in(branch_target),
     .out(buffer_branch_target)
 );
 
@@ -256,7 +260,7 @@ compare cmp
     .br_en
 );
 
-assign EX_ins_valid = ctw_EX.opcode != op_nop;
+assign EX_ins_valid = ctw_EX.opcode != op_nop && ctw_EX.opcode != 0;
 assign EX_ir = ctw_EX.ir;
 assign EX_pc = ctw_EX.pc;
 
@@ -374,8 +378,8 @@ always_comb begin
         // u_wbm_imm: regfile_in_MEM = u_imm;
         wbm_imm: regfile_in_MEM = ctw_MEM.imm;
         wbm_rdata: regfile_in_MEM = 32'd0;
-        wbm_pc4: regfile_in_MEM = pc_out_MEM + 4;
-        wbm_pc2: regfile_in_MEM = pc_out_MEM + 2;
+        wbm_pc4: regfile_in_MEM = ctw_MEM.pc + 4;
+        wbm_pc2: regfile_in_MEM = ctw_MEM.pc + 2;
         default: regfile_in_MEM = 32'bX;
     endcase
 end
@@ -391,8 +395,8 @@ always_comb begin
         // u_wbm_imm: regfile_in_WB = u_imm;
         wbm_imm: regfile_in_WB = ctw_WB.imm;
         wbm_rdata: regfile_in_WB = dmem_rdata_shifted;
-        wbm_pc4: regfile_in_WB = pc_out_WB + 4;
-        wbm_pc2: regfile_in_WB = pc_out_WB + 2;
+        wbm_pc4: regfile_in_WB = ctw_WB.pc + 4;
+        wbm_pc2: regfile_in_WB = ctw_WB.pc + 2;
         default: regfile_in_WB = 32'bX;
     endcase
 end
@@ -420,32 +424,32 @@ assign imem_stall = ~pipe2;
 
 /// MARK: - ID/EX pipeline register
 
-register #(3*32+$bits(rv32i_control_word)) ID_EX_pipeline
+register #(2*32+$bits(rv32i_control_word)) ID_EX_pipeline
 (
     .clk,
     .load(dmem_resp),
-    .in({ctwmux_out, pc_out_ID, selected_rs1_out, selected_rs2_out}),
-    .out({ctw_EX, pc_out_EX, rs1_out_EX, rs2_out_EX})
+    .in({ctwmux_out, selected_rs1_out, selected_rs2_out}),
+    .out({ctw_EX, rs1_out_EX, rs2_out_EX})
 );
 
 /// MARK: - EX/MEM pipeline register
 
-register #($bits(rv32i_control_word)+3*32+1) EX_MEM_pipeline
+register #($bits(rv32i_control_word)+2*32+1) EX_MEM_pipeline
 (
     .clk,
     .load(dmem_resp),
-    .in({ctw_EX, selected_rs2_EX_out, alu_out, pc_out_EX, br_en}),
-    .out({ctw_MEM, rs2_out_MEM, alu_out_MEM, pc_out_MEM, br_en_MEM})
+    .in({ctw_EX, selected_rs2_EX_out, alu_out, br_en}),
+    .out({ctw_MEM, rs2_out_MEM, alu_out_MEM, br_en_MEM})
 );
 
 /// MARK: - MEM/WB pipeline register
 
-register #($bits(rv32i_control_word)+32*3+1 + 32) MEM_WB_pipeline
+register #($bits(rv32i_control_word)+32*2+1 + 32) MEM_WB_pipeline
 (
     .clk,
     .load(dmem_resp),
-    .in({ctw_MEM, alu_out_MEM, dmem_address_untruncated, pc_out_MEM, br_en_MEM, dmem_address}),
-    .out({ctw_WB, alu_out_WB, dmem_address_untruncated_WB, pc_out_WB, br_en_WB, dmem_address_WB})
+    .in({ctw_MEM, alu_out_MEM, dmem_address_untruncated, br_en_MEM, dmem_address}),
+    .out({ctw_WB, alu_out_WB, dmem_address_untruncated_WB, br_en_WB, dmem_address_WB})
 );
 
 assign dmem_stall = 1'd0;

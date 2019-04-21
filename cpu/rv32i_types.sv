@@ -31,6 +31,12 @@ typedef enum bit [2:0] {
     cop3_7 = 3'd7
 } c_funct3_t;
 
+typedef enum bit [1:0] { 
+    true_pc_0 = 2'd0,
+    true_pc_p2 = 2'd1,
+    true_pc_m2 = 2'd2
+} true_pc_sel_t;
+
 typedef enum bit [4:0] {
     c_addi4spn = {cop2_0, cop3_0},
     c_fld = {cop2_0, cop3_1}, //not supported
