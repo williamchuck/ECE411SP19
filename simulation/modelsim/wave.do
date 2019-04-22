@@ -1,6 +1,10 @@
 onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate -label clk -radix hexadecimal /urchin_tb/dut/cpu/clk
+add wave -noupdate -radix decimal /urchin_tb/dut/cache/icache_core/miss_counter
+add wave -noupdate -radix decimal /urchin_tb/dut/cache/dcache_core/miss_counter
+add wave -noupdate -radix decimal /urchin_tb/dut/cpu/irm/executed_ins_count
+add wave -noupdate -radix decimal /urchin_tb/dut/cpu/alu/multiplier/control_unit/executed_ins_count
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/PC/out
 add wave -noupdate -label ctw -radix hexadecimal /urchin_tb/dut/cpu/ctw
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/ctwmux_out

@@ -25,12 +25,21 @@ enum logic [4:0]
     DONE
 } curr_state, next_state; 
 
+//Performance metric
+logic [31:0] executed_ins_count;
+
+initial begin
+    executed_ins_count = 0;
+end
+
 logic [6:0] counter, nextCounter;
 
 //updates flip flop, current state is the only one
 always_ff @ (posedge Clk) begin
     curr_state <= next_state;
     counter <= nextCounter;
+    if(curr_state == IDLE & next_state != IDLE)
+        executed_ins_count <= executed_ins_count + 1;
 end
 
 // Assign outputs based on state

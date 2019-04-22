@@ -5,12 +5,17 @@ module ir_manager (
     input logic j,
     input logic ready,
     input logic hazard,
+    input logic control_hazard_stall,
     input logic [31:0] pc,
     input logic [31:0] imem_rdata,
     output logic [31:0] true_pc,
     output logic [31:0] ir,
     output logic ir_stall
 );
+
+//Performance Metric Counter
+logic [31:0] executed_ins_count;
+logic addExecutedIns;
 
 logic stall;
 logic [15:0] half_instr, _half_instr, low_full_instr, _low_full_instr;
@@ -73,6 +78,9 @@ always_comb begin
 end
 
 always_comb begin
+    //Performance Metric
+    addExecutedIns = 1'd0;
+
     // Default buffer update values
     _with_half = 1'b0;
     _with_low_full = 1'b0;
@@ -91,6 +99,9 @@ always_comb begin
             irl_sel = irl_one;
             _with_low_full = 1'b1;
         end else begin
+
+            addExecutedIns = 1'd1;
+
             irl_sel = irl_rdata_low;
             _with_low_full = 1'b0;
         end
@@ -98,11 +109,15 @@ always_comb begin
         true_pc_sel = true_pc_0;
         irl_sel = irl_rdata_low;
         if (imem_rdata[1:0] == 2'b11) begin
+
             stall = 1'b0;
             irh_sel = irh_rdata_high;
             _with_low_full = 1'b0;
             _with_half = 1'b0;
         end else if (imem_rdata[17:16] == 2'b11) begin
+
+            addExecutedIns = 1'd1;
+
             stall = 1'b0;
             irh_sel = irh_one;
             _with_low_full = 1'b1;
@@ -114,6 +129,9 @@ always_comb begin
             irh_sel = irh_one;
         end
     end else if (with_half) begin
+
+        addExecutedIns = 1'd1;
+
         true_pc_sel = true_pc_p2;
         stall = 1'b0;
         irh_sel = irh_one;
@@ -135,5 +153,13 @@ always_comb begin
         end
     end
 end
+
+register #(32) executed_ins_count_reg
+(
+    .clk,
+    .load(ready & ~hazard & addExecutedIns & ~control_hazard_stall),
+    .in(executed_ins_count + 1),
+    .out(executed_ins_count)
+);
 
 endmodule

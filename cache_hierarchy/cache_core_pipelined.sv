@@ -245,4 +245,20 @@ assign downstream_resp_ACT = downstream_resp & ~do_wb;
 assign upstream_resp = upstream_ready | !request_ACT;
 assign upstream_rdata = downstream_resp_ACT ? downstream_rdata : line_out;
 
+//MARK : Performance metrics
+
+logic _pipe;
+logic [31:0] miss_counter;
+
+initial begin
+    miss_counter = 0;
+    _pipe = 0;
+end
+
+always_ff @ (posedge clk) begin
+    _pipe = pipe;
+    if(_pipe & ~hit & request_ACT)
+        miss_counter <= miss_counter + 1;
+end
+
 endmodule

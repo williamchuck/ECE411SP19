@@ -125,6 +125,7 @@ ir_manager irm
     .j(pcmux_sel_ID),
     .ready(imem_ready),
     .hazard(data_hazard_stall | ~dmem_resp),
+    .control_hazard_stall,
     .pc(pc_out_ID),
     .true_pc,
     .imem_rdata,

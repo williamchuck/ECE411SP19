@@ -90,10 +90,10 @@ cache_control control
 );
 
 
-always @(posedge clk) begin
-    if (downstream_write && downstream_address == 32'hd80) begin
-        $display("%0t L2 Writeback data: %h Way: %b", $time, downstream_wdata, way);
-    end
-end
+// always @(posedge clk) begin
+//     if (downstream_write && downstream_address == 32'hd80) begin
+//         $display("%0t L2 Writeback data: %h Way: %b", $time, downstream_wdata, way);
+//     end
+// end
     
 endmodule
