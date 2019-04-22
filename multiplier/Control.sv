@@ -5,11 +5,13 @@ module Control
     input logic m,
     input logic div,
     input logic differentSigns,
+    input logic stall,
     output logic Load,
     output logic Shift,
     output logic Subtract,
     output logic clearAloadB,
     output logic flipsign,
+    output logic resp,
     output logic ready
 );
 //NOTE, We are assumming Execute is active high
@@ -38,18 +40,19 @@ always_comb begin
     
     unique case (curr_state)
     
-        IDLE, DONE :begin
+        IDLE: begin
             if (Execute)
                 next_state = LOAD;
             nextCounter = 7'd33;
         end
+
+        DONE: begin
+            if(~stall)
+                next_state = IDLE;
+        end
             
         LOAD: begin
             nextCounter = counter - 1'd1;
-            //if(counter == 7'd0)
-            //    next_state = DONE;
-            //else
-            //    next_state = SHIFT;
             next_state = SHIFT;
         end
         
@@ -84,6 +87,7 @@ always_comb begin
     clearAloadB = 1'b0;
     flipsign = 1'd0;
     ready = 1'd0;
+    resp = 1'd0;
     
     // Assign outputs based on ‘state’
     case (curr_state)
@@ -105,12 +109,12 @@ always_comb begin
         IDLE: begin
             Load = 1'd1;
             clearAloadB = 1'd1;
+            resp = ~Execute;
         end
         
         DONE: begin
             ready = 1'd1;
-            Load = 1'd1;
-            clearAloadB = 1'd1;
+            resp = 1'd1;
         end
 
        default: ; //default case, can also have default assignments for Ld_A and Ld_B before case

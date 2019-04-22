@@ -4,11 +4,13 @@ module Multiplier
     input logic Run,
     input logic [32:0] opA, opB,
     input logic div,
+    input logic stall,
     output logic [32:0] Aval, Bval, 
-    output logic X,
+    output logic resp,
     output logic ready
  );
-logic control_load, control_shift, control_subtract, control_clearALoadB; //control unit outputs during each state
+logic control_load, control_shift, control_subtract, control_clearALoadB;
+logic X;
 logic A_R_out, B_R_out, A_L_out, B_L_out;
 logic flipsign;
 logic [32:0] Sum;
@@ -25,12 +27,14 @@ Control control_unit
     .m(B_R_out),
     .div,
     .differentSigns(opA[32] != opB[32]),
+    .stall,
     //based on the above inputs, the control calculates the following for each state:
     .Load(control_load),
     .Shift(control_shift),
     .Subtract(control_subtract),
     .clearAloadB(control_clearALoadB),
     .flipsign,
+    .resp,
     .ready
 );
 

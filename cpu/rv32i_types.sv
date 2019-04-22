@@ -166,9 +166,21 @@ typedef enum bit [2:0] {
     alu_and = 3'b111
 } alu_ops;
 
+typedef enum bit [2:0] {
+    mul    = 3'b000, // sign-sign low
+    mulh   = 3'b001, // sign-sign high
+    mulhsu = 3'b010, // sign-unsign high
+    mulhu  = 3'b011, // unsign-unsign high
+    div    = 3'b100, // sign / sign
+    divu   = 3'b101, // unsign / unsign
+    rem    = 3'b110, // sign % sign
+    remu   = 3'b111  // unsign $ unsign
+} mul_ops;
+
 typedef struct packed {
     rv32i_opcode opcode;
     alu_ops aluop;
+    logic muldiv;
     branch_funct3_t cmpop;
     logic load_regfile;
     logic dmem_read;

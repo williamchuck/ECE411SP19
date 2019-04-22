@@ -62,6 +62,7 @@ assign cimm_u_swsp_imm = {{24{1'b0}}, ir[8:7], ir[12:9], 2'b00};
 always_comb begin : control_word_generation_logic
     ctw_imm_sel = imm_i;
     ctw.opcode = opcode;
+    ctw.muldiv = 1'b0;
     ctw.aluop = alu_ops'(funct3);
     ctw.cmpop = branch_funct3_t'(funct3);
     ctw.dmem_read = 1'd0;
@@ -163,21 +164,24 @@ always_comb begin : control_word_generation_logic
             ctw.rs1 = ir_rs1;
             ctw.rs2 = ir_rs2;
             ctw.rd = ir_rd;
-            if(arith_funct3_t'(funct3) == slt) begin
+            if (funct7 == 7'b0000001) begin
+                ctw.muldiv = 1'b1;
+                ctw.alumux2_sel = alm2_rs2;
+            end else if (arith_funct3_t'(funct3) == slt) begin
                 ctw.cmpop = blt;
                 ctw.wbmux_sel = wbm_br;
-            end else if(arith_funct3_t'(funct3) == sltu) begin
+            end else if (arith_funct3_t'(funct3) == sltu) begin
                 ctw.cmpop = bltu;
                 ctw.wbmux_sel = wbm_br;
-            end else if(arith_funct3_t'(funct3) == sr && funct7 == 7'b0100000) begin
+            end else if (arith_funct3_t'(funct3) == sr && funct7 == 7'b0100000) begin
                 ctw.aluop = alu_sra;
                 ctw.alumux2_sel = alm2_rs2;
-            end else if(arith_funct3_t'(funct3) == add && funct7 == 7'b0100000) begin
+            end else if (arith_funct3_t'(funct3) == add && funct7 == 7'b0100000) begin
                 ctw.aluop = alu_sub;
                 ctw.alumux2_sel = alm2_rs2;
             end else begin
                 ctw.alumux2_sel = alm2_rs2;
-            end
+            end 
         end
 
         op_nop: ;

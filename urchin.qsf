@@ -58,9 +58,16 @@ set_global_assignment -name EDA_TEST_BENCH_NAME multiply_testbench -section_id e
 set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id multiply_testbench
 set_global_assignment -name EDA_TEST_BENCH_RUN_SIM_FOR "5 us" -section_id multiply_testbench
 set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME testbench -section_id multiply_testbench
+set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
+set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
+set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name EDA_TEST_BENCH_FILE test/urchin_tb.sv -section_id urchin_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE test/physical_memory.sv -section_id urchin_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE test/magic_memory_dual_port.sv -section_id urchin_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE test/shadow_memory.sv -section_id urchin_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE multiplier/testbench.sv -section_id multiply_testbench
 set_global_assignment -name SYSTEMVERILOG_FILE multiplier/Adder34bit.sv
 set_global_assignment -name SYSTEMVERILOG_FILE multiplier/RegM_33.sv
-set_global_assignment -name SYSTEMVERILOG_FILE multiplier/testbench.sv
 set_global_assignment -name SYSTEMVERILOG_FILE multiplier/Multiplier.sv
 set_global_assignment -name SYSTEMVERILOG_FILE multiplier/Control.sv
 set_global_assignment -name SYSTEMVERILOG_FILE test/shadow_memory.sv
@@ -92,12 +99,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE register.sv
 set_global_assignment -name SYSTEMVERILOG_FILE mux.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cpu.sv
 set_global_assignment -name SYSTEMVERILOG_FILE cache_hierarchy.sv
-set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
-set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
-set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
-set_global_assignment -name EDA_TEST_BENCH_FILE test/urchin_tb.sv -section_id urchin_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE test/physical_memory.sv -section_id urchin_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE test/magic_memory_dual_port.sv -section_id urchin_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE test/shadow_memory.sv -section_id urchin_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE multiplier/testbench.sv -section_id multiply_testbench
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
