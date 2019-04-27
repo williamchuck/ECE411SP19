@@ -17,8 +17,35 @@ logic [32:0] Sum;
 logic [32:0] opA_Abs;
 logic [32:0] opB_Abs;
 
-assign opA_Abs = opA[32] ? -opA : opA;
-assign opB_Abs = opB[32] ? -opB : opB;
+logic _run;
+logic [32:0] _opA;
+logic [32:0] _opB;
+
+
+logic [32:0] buffered_opA;
+logic [32:0] buffered_opB;
+
+initial begin
+    _run = 1'd0;
+end
+
+always_ff @(posedge Clk) begin
+    _run <= Run;
+end
+
+register #(66) opA_buff
+(
+    .clk(Clk),
+    .load(Run & ~_run),
+    .in({opA, opB}),
+    .out({buffered_opA, buffered_opB})
+);
+
+assign _opA = _run ? buffered_opA : opA;
+assign _opB = _run ? buffered_opB : opB;
+
+assign opA_Abs = opA[32] ? -_opA : _opA;
+assign opB_Abs = opB[32] ? -_opB : _opB;
 
 Control control_unit
 (
@@ -26,7 +53,7 @@ Control control_unit
     .Execute(Run),
     .m(B_R_out),
     .div,
-    .differentSigns(opA[32] != opB[32]),
+    .differentSigns(_opA[32] != _opB[32]),
     .stall,
     //based on the above inputs, the control calculates the following for each state:
     .Load(control_load),
@@ -35,7 +62,10 @@ Control control_unit
     .clearAloadB(control_clearALoadB),
     .flipsign,
     .resp,
-    .ready
+    .ready,
+
+    ._opA, ._opB,
+    .Aval, .Bval
 );
 
 RegM_33 registerA
@@ -58,8 +88,8 @@ RegM_33 registerB
 (
     .Clk,
     .Reset(1'd0),
-    .Load(control_clearALoadB | (flipsign & (opB != 0))), //register B only loads from switches when ClearA_LoadB is high 
-    .D((flipsign & (opB != 0)) ? -Bval : (div ? opA_Abs : opB)),
+    .Load(control_clearALoadB | (flipsign & (_opB != 0))), //register B only loads from switches when ClearA_LoadB is high 
+    .D((flipsign & (_opB != 0)) ? -Bval : (div ? opA_Abs : _opB)),
     .ShiftR_In(A_R_out), //digit in the LSB of A
     .ShiftR_En(~div & control_shift),
     .ShiftL_In({Aval[31:0], Bval[32]} >= opB_Abs),
@@ -73,7 +103,7 @@ RegM_33 registerB
 Adder34bit adder
 (
     .Clk,
-    .Switches(div ? opB_Abs : opA),
+    .Switches(div ? opB_Abs : _opA),
     .A(Aval),
     .sub(div | control_subtract), //control_subtract is high when its the last shift and the multiplicand is <0 
     .outputEnable(div | (~div & B_R_out)), //when the LSB of B is zero, we should not add

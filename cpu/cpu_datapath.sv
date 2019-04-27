@@ -47,6 +47,31 @@ rv32i_word rs1_out_EX, rs2_out_EX, rs2_out_MEM;
 
 logic [31:0] buffer_branch_target, branch_target;
 
+rv32i_control_word ctw_nil;
+
+assign ctw_nil.is_c = 1'b0;
+assign ctw_nil.opcode = op_nop;
+assign ctw_nil.c_opcode = c_reserved;
+assign ctw_nil.aluop = alu_add;
+assign ctw_nil.muldiv = 1'b0;
+assign ctw_nil.cmpop = beq;
+assign ctw_nil.load_regfile = 1'b0;
+assign ctw_nil.dmem_read = 1'b0;
+assign ctw_nil.dmem_write = 1'b0;
+assign ctw_nil.cmpmux_sel = cmpmux_rs2;
+assign ctw_nil.pcmux_sel = 2'b00;
+assign ctw_nil.alumux1_sel = alm1_rs1;
+assign ctw_nil.wbmux_sel = wbm_alu;
+assign ctw_nil.alumux2_sel = alm2_imm;
+assign ctw_nil.funct3 = 3'b000;
+assign ctw_nil.funct7 = 7'b0;
+assign ctw_nil.pc = 32'b0;
+assign ctw_nil.ir = 32'hFFFFFFFF;
+assign ctw_nil.imm = 32'b0;
+assign ctw_nil.rs1 = 5'b0;
+assign ctw_nil.rs2 = 5'b0;
+assign ctw_nil.rd = 5'b0;
+
 /// MARK: - Components in IF stage
 
 assign imem_write = 1'b0;
@@ -61,7 +86,7 @@ logic [31:0] cmpmux_out, alu_out, alu_out_WB, alu_out_MEM;
 logic [31:0] dmem_rdata_WB;
 rv32i_control_word ctw, ctwmux_out, ctw_EX, ctw_MEM, ctw_WB;
 
-logic control_hazard_1_bit, control_hazard_2_bit, jump;
+logic control_hazard_1_bit, control_hazard_2_bit, jump, buffer_jump;
 logic alu_resp, alu_ready, alu_ready_MEM, alu_ready_WB;
 
 assign pipe1 = ~data_hazard_stall & imem_resp & ~ir_stall & alu_resp & dmem_resp;
@@ -78,16 +103,19 @@ pc_register PC
 );
 
 assign pcmux_out = pcmux_sel ? branch_target : (pc_out & 32'hfffffffc) + 32'd4;
-assign branch_target = jump ? alu_out : buffer_branch_target;
+// assign branch_target = jump ? alu_out : buffer_branch_target;
+assign branch_target = buffer_jump ? buffer_branch_target : alu_out;
 
 /// MARK: - Components in ID stage
 
 logic force_nop;
 // assign ir_out = force_nop ? 32'hffffffff : ir;
-assign ctwmux_out = force_nop ? {$bits(ctwmux_out){1'b0}} : ctw;
+assign ctwmux_out = force_nop ? ctw_nil : ctw;
 
+logic is_load;
 always_comb begin
-    if (ctw_WB.opcode == op_load) begin
+    is_load = (~ctw_WB.is_c & (ctw_WB.opcode == op_load)) | (ctw_WB.is_c & ((ctw_WB.c_opcode == c_lw)|(ctw_WB.c_opcode == c_lwsp)));
+    if (is_load) begin
         load_regfile_WB = dmem_ready;
     end else if (ctw_WB.opcode == op_reg && ctw_WB.muldiv) begin
         load_regfile_WB = alu_ready_WB;
@@ -190,8 +218,16 @@ register branch_target_buffer
     .out(buffer_branch_target)
 );
 
-assign control_hazard_stall = jump | control_hazard_1_bit | control_hazard_2_bit;
+register #(1) jump_buffer
+(
+    .clk,
+    .load(ctw_EX.opcode != op_nop | pipe1),
+    .in(jump),
+    .out(buffer_jump)
+);
 
+assign control_hazard_stall = jump | control_hazard_1_bit | control_hazard_2_bit;
+// assign buffer_jump = control_hazard_1_bit | control_hazard_2_bit;
 assign force_nop = (data_hazard_stall | control_hazard_stall | ~imem_ready);
 
 /// MARK: - Components in EX stage
@@ -201,15 +237,25 @@ assign pcmux_sel = jump | control_hazard_1_bit;
 
 rv32i_word selected_rs1_EX_out, selected_rs2_EX_out;
 
+logic alu_resp_;
+register #(1) alu_resp_reg
+(
+    .clk,
+    .load(1'b1),
+    .in(alu_resp),
+    .out(alu_resp_)
+);
+
 always_comb begin : rs1_2_sel
-    selected_rs1_EX_out = 32'd0;
+    selected_rs1_EX_out = rs1_out_EX;
     case(rs1_out_EX_sel)
         2'd0: selected_rs1_EX_out = rs1_out_EX;
         2'd1: selected_rs1_EX_out = regfile_in_MEM;
         2'd2: selected_rs1_EX_out = regfile_in_WB;
         default:;
     endcase
-    selected_rs2_EX_out = 32'd0;
+
+    selected_rs2_EX_out = rs2_out_EX;
     case(rs2_out_EX_sel)
         2'd0: selected_rs2_EX_out = rs2_out_EX;
         2'd1: selected_rs2_EX_out = regfile_in_MEM;
@@ -323,8 +369,8 @@ always_comb begin
             dmem_wdata = dmem_wdata_unshifted;
         end
         default: begin
-            dmem_byte_enable = 4'h0;
-            dmem_wdata = 32'd0;
+            dmem_byte_enable = 4'hf;
+            dmem_wdata = dmem_wdata_unshifted;
         end
     endcase
 end

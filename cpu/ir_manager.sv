@@ -60,6 +60,7 @@ always_comb begin
         irl_rdata_low: ir[15:0] = imem_rdata[15:0];
         irl_low_full: ir[15:0] = low_full_instr;
         irl_half: ir[15:0] = half_instr;
+        irl_rdata_high: ir[15:0] = imem_rdata[31:16];
         default: ir[15:0] = 16'hffff;
     endcase
 
@@ -102,7 +103,7 @@ always_comb begin
 
             addExecutedIns = 1'd1;
 
-            irl_sel = irl_rdata_low;
+            irl_sel = irl_rdata_high;
             _with_low_full = 1'b0;
         end
     end else if ((j & ~pc[1] & (pc != pc_)) | (~with_half & ~with_low_full)) begin

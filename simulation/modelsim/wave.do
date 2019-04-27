@@ -1,3 +1,4 @@
+delete wave *
 onerror {resume}
 quietly WaveActivateNextPane {} 0
 add wave -noupdate -label clk -radix hexadecimal /urchin_tb/dut/cpu/clk
@@ -6,15 +7,41 @@ add wave -noupdate -radix decimal /urchin_tb/dut/cache/dcache_core/miss_counter
 add wave -noupdate -radix decimal /urchin_tb/dut/cpu/irm/executed_ins_count
 add wave -noupdate -radix decimal /urchin_tb/dut/cpu/alu/multiplier/control_unit/executed_ins_count
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/PC/out
-add wave -noupdate -label ctw -radix hexadecimal /urchin_tb/dut/cpu/ctw
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/pcmux_out
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/pcmux_sel
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/jump
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/buffer_jump
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu_out
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/rs1_out_EX_sel
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/rs2_out_EX_sel
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/buffer_branch_target
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/branch_target
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alumux1_out
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alumux2_out
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/selected_rs1_EX_out
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/rs1_out_EX
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dmem_rdata
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dmem_wdata
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/dmem_wdata_unshifted
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/selected_rs2_EX_out
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/selected_rs2_out
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/rs2_out_EX
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/rs2_out_MEM
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dmem_address
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dmem_ready
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dmem_resp
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dmem_write
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dmem_read
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/ctw
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/ctwmux_out
-add wave -noupdate -label ctw_EX -radix hexadecimal /urchin_tb/dut/cpu/ctw_EX
-add wave -noupdate -label ctw_MEM -radix hexadecimal /urchin_tb/dut/cpu/ctw_MEM
-add wave -noupdate -label ctw_WB -radix hexadecimal /urchin_tb/dut/cpu/ctw_WB
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/ctw_EX
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/ctw_MEM
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/ctw_WB
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/aluop
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/a
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/b
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/f
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu_resp_
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/cmp/cmpop
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/cmp/arg1
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/cmp/arg2
@@ -23,6 +50,9 @@ add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/Aval
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/Bval
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/opA
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/opB
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/multiplier/_opA
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/multiplier/_opB
+add wave -noupdate /urchin_tb/dut/cpu/alu/multiplier/div
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/ready
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/alu/resp
 add wave -noupdate /urchin_tb/dut/cpu/alu/multiplier/stall
@@ -61,13 +91,23 @@ add wave -noupdate /urchin_tb/dut/cache/icache_core/downstream_read
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cpu/br_en
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/stall
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/upstream_read
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/upstream_write
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/upstream_address
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/upstream_resp
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/upstream_ready
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/downstream_read
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/downstream_write
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/downstream_address
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/way
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dcache_core/datas
+add wave -noupdate -radix hexadecimal {sim:/urchin_tb/dut/cache/dcache_core/arrays/forloop[3]/line/data}
+add wave -noupdate -radix hexadecimal {sim:/urchin_tb/dut/cache/dcache_core/arrays/forloop[2]/line/data}
+add wave -noupdate -radix hexadecimal {sim:/urchin_tb/dut/cache/dcache_core/arrays/forloop[1]/line/data}
+add wave -noupdate -radix hexadecimal {sim:/urchin_tb/dut/cache/dcache_core/arrays/forloop[0]/line/data}
+add wave -noupdate -radix hexadecimal {sim:/urchin_tb/dut/cache/dmem_wdata_ACT}
+add wave -noupdate -radix hexadecimal {sim:/urchin_tb/dut/cache/dcache_rdata}
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dmem_rdata
+add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/dmem_wdata
 add wave -noupdate /urchin_tb/dut/cpu/data_hazard_stall
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/control/wb_required
 add wave -noupdate -radix hexadecimal /urchin_tb/dut/cache/l2_cache_core/upstream_read
@@ -124,3 +164,5 @@ configure wave -timeline 0
 configure wave -timelineunits ps
 update
 WaveRestoreZoom {812757 ps} {2315497 ps}
+restart -f
+run 50 us

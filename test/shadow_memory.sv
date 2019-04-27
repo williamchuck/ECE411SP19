@@ -56,7 +56,7 @@ begin : mem_write
     if (error) begin
         $display("%0t Mismatch in shadow memory rdata!. Expected %h, Found: %h at Addr %h", $time, d_spec_rdata, dmem_rdata, dmem_addr);
     end
-    if (poison_inst) begin
+    if (poison_inst & imem_rdata[31:16] != 16'hffff && imem_rdata[15:0] != 16'hffff) begin
         $display("%0t Poisoning Instruction. Expected %h, Found: %h at PC %h", $time, i_spec_rdata, imem_rdata, imem_addr);
     end
 end : mem_write

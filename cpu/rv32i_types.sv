@@ -70,11 +70,12 @@ typedef enum bit [1:0] {
     irh_rdata_high = 2'd2
 } ir_high_sel_t;
 
-typedef enum bit [1:0] { 
-    irl_one = 2'd0,
-    irl_rdata_low = 2'd1,
-    irl_low_full = 2'd2,
-    irl_half = 2'd3
+typedef enum bit [2:0] { 
+    irl_one = 3'd0,
+    irl_rdata_low = 3'd1,
+    irl_low_full = 3'd2,
+    irl_half = 3'd3,
+    irl_rdata_high = 3'd4
 } ir_low_sel_t;
 
 typedef enum bit [1:0] {
@@ -178,7 +179,9 @@ typedef enum bit [2:0] {
 } mul_ops;
 
 typedef struct packed {
+    logic is_c;
     rv32i_opcode opcode;
+    rv32ic_opcode c_opcode;
     alu_ops aluop;
     logic muldiv;
     branch_funct3_t cmpop;

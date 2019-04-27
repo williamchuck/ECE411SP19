@@ -22,10 +22,10 @@ assign ir_rd = ir[11:7];
 assign cir_rs1 = ir[11:7];
 assign cir_rd = ir[11:7];
 assign cir_rs2 = ir[6:2];
-assign cir_rs1s = {2'b00, ir[9:7]};
-assign cir_rs2s = {2'b00, ir[4:2]};
-assign cir_rds1 = {2'b00, ir[9:7]};
-assign cir_rds2 = {2'b00, ir[4:2]};
+assign cir_rs1s = {2'b01, ir[9:7]};
+assign cir_rs2s = {2'b01, ir[4:2]};
+assign cir_rds1 = {2'b01, ir[9:7]};
+assign cir_rds2 = {2'b01, ir[4:2]};
 assign funct3 = ir[14:12];
 assign funct7 = ir[31:25];
 assign opcode = rv32i_opcode'(ir[6:0]);
@@ -33,6 +33,14 @@ assign c_opcode = ir[1:0];
 assign c_funct3 = ir[15:13];
 assign funct2 = ir[11:10];
 assign funct = ir[6:5];
+
+always_comb begin
+    if (ir[1:0] != 2'b11)
+        ctw.is_c = 1'b1;
+    else
+        ctw.is_c = 1'b0;
+end
+// assign ctw.is_c = (ir[1:0] != 2'b11);
 
 logic error;
 ctwimm_sel_t ctw_imm_sel;
@@ -86,6 +94,7 @@ always_comb begin : control_word_generation_logic
         op_lui: begin
             ctw.load_regfile = 1'd1;
             ctw.wbmux_sel = wbm_imm;
+            ctw_imm_sel = imm_u;
             ctw.rd = ir_rd;
         end
 
@@ -187,6 +196,7 @@ always_comb begin : control_word_generation_logic
         op_nop: ;
 
         default: begin
+            ctw.c_opcode = rv32ic_opcode'({c_opcode, c_funct3});
             // C extension
             case(rv32ic_opcode'({c_opcode, c_funct3}))
                 c_addi4spn: begin
@@ -329,6 +339,7 @@ always_comb begin : control_word_generation_logic
                     ctw_imm_sel = cimm_u_lwsp;
                     ctw.aluop = alu_add;
                     ctw.dmem_read = 1'b1;
+                    ctw.wbmux_sel = wbm_rdata;
                 end
 
                 c_jalr_mv_add: begin
@@ -338,7 +349,7 @@ always_comb begin : control_word_generation_logic
                             ctw.pcmux_sel = 2'b01;
                             ctw.aluop = alu_add;
                             ctw.wbmux_sel = wbm_pc2;
-                            ctw.rs1 = ir_rs1;
+                            ctw.rs1 = cir_rs1;
                             ctw.rd = 5'd1;
                             ctw.alumux2_sel = alm2_zero;
                         end else begin // add
@@ -353,7 +364,7 @@ always_comb begin : control_word_generation_logic
                         if (cir_rs2 == 5'd0) begin // jr
                             ctw.pcmux_sel = 2'b01;
                             ctw.aluop = alu_add;
-                            ctw.rs1 = ir_rs1;
+                            ctw.rs1 = cir_rs1;
                             ctw.alumux2_sel = alm2_zero;
                         end else begin // mv
                             ctw.rs1 = 5'd0;

@@ -110,11 +110,8 @@ cache_core_pipelined #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache
 );
 
 // always @(posedge clk) begin
-//     if (dmem_address == 32'hd80 && dcache_write) begin
-//         $display("%0t Writing to d80 %h", $time, dcache_wdata);
-//     end
-//     if (dmem_address == 32'hd80 && dcache_read) begin
-//         $display("%0t Reading from d80 %h", $time, dcache_rdata);
+//     if (dmem_write) begin
+//         $display("%0t Writing to dmem at address: %h dcache_wdata: %h dmem_wdata: %h dmem_byte_enable: %b", $time, dmem_address, dcache_wdata, dmem_wdata, dmem_byte_enable);
 //     end
 // end
 
@@ -136,14 +133,14 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(3)) l2_cache_core
     .way
 );
 
-always @(posedge clk) begin
-    if (l2_address == 32'hd80 && l2_write) begin
-        $display("%0t L2 Writing to d80 %h Way %b", $time, l2_wdata, way);
-    end
-    if (l2_address == 32'hd80 && l2_read) begin
-        $display("%0t L2 Reading from d80 %h Way %b", $time, l2_rdata, way);
-    end
-end
+// always @(posedge clk) begin
+//     if (l2_address == 32'hd80 && l2_write) begin
+//         $display("%0t L2 Writing to d80 %h Way %b", $time, l2_wdata, way);
+//     end
+//     if (l2_address == 32'hd80 && l2_read) begin
+//         $display("%0t L2 Reading from d80 %h Way %b", $time, l2_rdata, way);
+//     end
+// end
 
 cache_arbiter arbiter
 (

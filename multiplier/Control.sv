@@ -12,7 +12,12 @@ module Control
     output logic clearAloadB,
     output logic flipsign,
     output logic resp,
-    output logic ready
+    output logic ready,
+
+    //for printing
+
+    input logic [32:0] _opA, _opB,
+    input logic [32:0] Aval, Bval
 );
 //NOTE, We are assumming Execute is active high
 enum logic [4:0]
@@ -129,6 +134,36 @@ always_comb begin
        default: ; //default case, can also have default assignments for Ld_A and Ld_B before case
 
 endcase
+end
+
+//DEBUGGING USE ONLY
+
+// logic [32:0] _opA, _opB;
+
+// always_ff @(posedge Clk) begin
+//     _opA <= opA;
+//     _opB <= opB;
+// end
+
+always @(posedge Clk) begin
+    if (curr_state == DONE) begin
+//         // $display("%0t Done. div: %b opA: %d opB: %d Aval: %d, Bval: %d, AvalBval: %d", $time, div, opA, opB, Aval, Bval, {Aval, Bval});
+
+//         if(!div && opA * opB != {Aval, Bval}) begin
+//             $display("Error incorrect result! Expected product: %h, found: %h", opA * opB, {Aval, Bval});
+//         end
+
+        if(div && (Aval != _opA % _opB || Bval != _opA / _opB)) begin
+            $display("%0t Error incorrect result! Expected quotient: %d, found: %d Expected Remainder: %d, found: %d", $time, _opA / _opB, Bval, _opA % _opB, Aval);
+        end
+    end
+
+    // if(curr_state != IDLE) begin
+    //     if(_opA != opA)
+    //         $display("%0t Change in A! From %h to %h", $time, _opA, opA);
+    //     if(_opB != opB)
+    //         $display("%0t Change in B! From %h to %h", $time, _opB, opB);
+    // end
 end
 
 endmodule
