@@ -42,7 +42,7 @@ always_comb begin
 end
 // assign ctw.is_c = (ir[1:0] != 2'b11);
 
-logic error;
+// logic error;
 ctwimm_sel_t ctw_imm_sel;
 
 rv32i_word imm_i_imm, imm_s_imm, imm_b_imm, imm_u_imm, imm_j_imm;
@@ -70,6 +70,7 @@ assign cimm_u_swsp_imm = {{24{1'b0}}, ir[8:7], ir[12:9], 2'b00};
 always_comb begin : control_word_generation_logic
     ctw_imm_sel = imm_i;
     ctw.opcode = opcode;
+    ctw.c_opcode = rv32ic_opcode'({c_opcode, c_funct3});
     ctw.muldiv = 1'b0;
     ctw.aluop = alu_ops'(funct3);
     ctw.cmpop = branch_funct3_t'(funct3);
@@ -88,7 +89,7 @@ always_comb begin : control_word_generation_logic
     ctw.rs2 = 5'd0;
     ctw.rd = 5'd0;
     ctw.ir = ir;
-    error = 1'd0;
+    //error = 1'd0;
     
     case(opcode)
         op_lui: begin
@@ -196,7 +197,6 @@ always_comb begin : control_word_generation_logic
         op_nop: ;
 
         default: begin
-            ctw.c_opcode = rv32ic_opcode'({c_opcode, c_funct3});
             // C extension
             case(rv32ic_opcode'({c_opcode, c_funct3}))
                 c_addi4spn: begin

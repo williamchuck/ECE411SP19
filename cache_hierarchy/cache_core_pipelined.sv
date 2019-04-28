@@ -42,7 +42,7 @@ assign request_IDX = upstream_read | upstream_write;
 
 /// MARK: - Logics for ACTION stage
 logic [s_index-1:0] index_WB;
-logic [31:0] address_ACT;
+logic [31:0] address_ACT_1, address_ACT_2;
 logic [s_tag-1:0] tag_ACT;
 logic [s_index-1:0] index_ACT;
 logic [num_ways-1:0] way;
@@ -55,8 +55,8 @@ logic [num_ways-2:0] lru, new_lru;
 logic downstream_resp_ACT, hit, dirty, new_dirty;
 logic request_ACT, write_ACT, do_wb_ACT, read_ACT;
 
-assign tag_ACT = address_ACT[31:s_offset+s_index];
-assign index_ACT = address_ACT[s_offset+s_index-1:s_offset];
+assign tag_ACT = address_ACT_1[31:s_offset+s_index];
+assign index_ACT = address_ACT_2[s_offset+s_index-1:s_offset];
 
 // `read` indicates exactly when the pipeline moves
 assign upstream_ready = downstream_resp_ACT | hit;
@@ -199,12 +199,20 @@ register #(1) IDX_ACT_read
     .out(read_ACT)
 );
 
-register IDX_ACT_address
+register IDX_ACT_address_1
 (
     .clk,
     .load(pipe),
     .in(upstream_address),
-    .out(address_ACT)
+    .out(address_ACT_1)
+);
+
+register IDX_ACT_address_2
+(
+    .clk,
+    .load(pipe),
+    .in(upstream_address),
+    .out(address_ACT_2)
 );
 
 register #(1) IDX_ACT_write
@@ -236,7 +244,7 @@ register #(1) do_wb_reg
 /// MARK: - downstream interface
 
 assign downstream_address =
-    do_wb ? {tagwb_WB, index_WB, {s_offset{1'b0}}} : address_ACT;
+    do_wb ? {tagwb_WB, index_WB, {s_offset{1'b0}}} : address_ACT_1;
 assign downstream_read = ~hit & ~do_wb & (read_ACT | write_ACT);
 assign downstream_write = do_wb;
 assign downstream_wdata = line_out_WB;

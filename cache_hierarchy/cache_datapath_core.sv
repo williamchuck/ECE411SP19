@@ -50,15 +50,40 @@ logic [s_line-1:0] hitmux_out, wbmux_out, inmux_out, hit_data, miss_data;
 logic [s_line-1:0] datas [num_ways];
 logic [s_line-1:0] line_dataout;
 
-logic [31:0] _address_, _address_WB;
+logic [31:0] _address_1, _address_2, _address_3, _address_4, _address_WB;
 
-register #(32) upstream_to_downstream_address_buffer
+register #(32) upstream_to_downstream_address_buffer_1
 (
     .clk,
     .load(1'b1),
     .in(upstream_address),
-    .out(_address_)
+    .out(_address_1)
 );
+
+register #(32) upstream_to_downstream_address_buffer_2
+(
+    .clk,
+    .load(1'b1),
+    .in(upstream_address),
+    .out(_address_2)
+);
+
+register #(32) upstream_to_downstream_address_buffer_3
+(
+    .clk,
+    .load(1'b1),
+    .in(upstream_address),
+    .out(_address_3)
+);
+
+register #(32) upstream_to_downstream_address_buffer_4
+(
+    .clk,
+    .load(1'b1),
+    .in(upstream_address),
+    .out(_address_4)
+);
+
 
 register #(s_tag) upstream_to_downstream_tagmuxout_buffer
 (
@@ -80,17 +105,17 @@ register #(32) address_wb_buffer
 (
     .clk,
     .load(wb_required),
-    .in(_address_),
+    .in(_address_3),
     .out(_address_WB)
 );
 
-assign tag_ = _address_[31:s_offset+s_index];
-assign index_ = _address_[s_offset+s_index-1:s_offset];
+assign tag_ = _address_1[31:s_offset+s_index];
+assign index_ = _address_2[s_offset+s_index-1:s_offset];
 assign index = upstream_address[s_offset+s_index-1:s_offset];
 assign index_WB = _address_WB[s_offset+s_index-1:s_offset];
 
 // assign downstream_address = downstream_address_sel ? {tagmux_out_, index_, {s_offset{1'b0}}} : _address_;
-assign downstream_address = downstream_address_sel ? {tagmux_out_WB, index_WB, {s_offset{1'b0}}} : _address_;
+assign downstream_address = downstream_address_sel ? {tagmux_out_WB, index_WB, {s_offset{1'b0}}} : _address_4;
 assign upstream_rdata = downstream_resp ? downstream_rdata : line_dataout;
 
 onehot_mux #(s_way, s_tag) tagmux
@@ -206,7 +231,6 @@ onehot_mux #(s_way, s_line) hitmux
 (
     .sel(way),
     .datain(datas),
-    // .dataout(upstream_rdata)
     .dataout(line_dataout)
 );
 
