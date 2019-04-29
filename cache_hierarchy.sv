@@ -42,18 +42,21 @@ assign ipipe = imem_resp & ~imem_stall;
 logic [s_offset-1:0] imem_offset, dmem_offset;
 assign imem_offset = {imem_address[s_offset-1:2], 2'd0};
 assign dmem_offset = {dmem_address[s_offset-1:2], 2'd0};
-logic [s_offset-1:0] imem_offset_ACT, dmem_offset_ACT;
+logic [s_offset-1:0] imem_offset_ACT, dmem_offset_ACT, imem_offset_ACT_;
 
 logic [3:0] dmem_byte_enable_ACT;
 
 logic dmem_write_ACT;
 
+logic l2_resp_;
 logic icache_read, dcache_read, dcache_write;
+logic icache_ready;
 logic l2_icache_resp, l2_icache_read, l2_icache_write, l2_dcache_resp;
 logic l2_dcache_read, l2_dcache_write, l2_read, l2_write, l2_resp;
 logic [31:0] imem_rdata_transformer_out, dmem_rdata_transformer_out, dmem_wdata_ACT;
 logic [31:0] l2_icache_address, l2_dcache_address, l2_address;
-logic [255:0] icache_rdata, l2_icache_rdata, l2_icache_wdata;
+logic [255:0] l2_rdata_;
+logic [255:0] icache_rdata, icache_rdata_, l2_icache_rdata, l2_icache_wdata;
 logic [255:0] l2_dcache_wdata, dcache_wdata, dcache_rdata;
 logic [255:0] dcache_downstream_rdata_transformed, l2_wdata, l2_rdata, l2_dcache_rdata;
 logic [255:0] pmem_rdata_reg_out;
@@ -79,7 +82,7 @@ cache_core_pipelined #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) icache
     .upstream_wdata({s_line{1'b0}}),
     .upstream_rdata(icache_rdata),
     .upstream_resp(imem_resp),
-    .upstream_ready(imem_ready),
+    .upstream_ready(icache_ready),
 
     .downstream_resp(l2_icache_resp),
     .downstream_rdata(l2_icache_rdata),
@@ -144,7 +147,34 @@ cache_core #(.s_offset(s_offset), .s_index(s_index), .s_way(3)) l2_cache_core
 
 cache_arbiter arbiter
 (
-    .*
+    .clk,
+    .imem_read,
+    .dmem_read,
+    .dmem_write,
+    .icache_read,
+    .dcache_read,
+    .dcache_write,
+
+    .l2_icache_read,
+    .l2_icache_write,
+    .l2_icache_address,
+    .l2_icache_wdata,
+    .l2_icache_resp,
+    .l2_icache_rdata,
+
+    .l2_dcache_read,
+    .l2_dcache_write,
+    .l2_dcache_address,
+    .l2_dcache_wdata,
+    .l2_dcache_resp,
+    .l2_dcache_rdata,
+
+    .l2_resp(l2_resp_),
+    .l2_rdata(l2_rdata_),
+    .l2_read,
+    .l2_write,
+    .l2_address,
+    .l2_wdata
 );
 
 register #(s_offset) imem_pipeline_reg
@@ -161,6 +191,22 @@ register #(s_offset+1+4+32) dmem_pipeline_reg
     .load(dpipe),
     .in({dmem_offset, dmem_write, dmem_byte_enable, dmem_wdata}),
     .out({dmem_offset_ACT, dmem_write_ACT, dmem_byte_enable_ACT, dmem_wdata_ACT})
+);
+
+register #(256 + s_offset + 1) imem_buffer
+(
+    .clk,
+    .load(~imem_stall),
+    .in({icache_rdata, icache_ready, imem_offset_ACT}),
+    .out({icache_rdata_, imem_ready, imem_offset_ACT_})
+);
+
+register #(256 + 1) l2_buffer
+(
+    .clk,
+    .load(1'b1),
+    .in({l2_resp, l2_rdata}),
+    .out({l2_resp_, l2_rdata_})
 );
 
 input_transformer dcache_downstream_rdata_transformer
@@ -185,8 +231,8 @@ input_transformer dcache_upstream_wdata_transformer
 
 output_transformer icache_output_transformer
 (
-    .line_data(icache_rdata),
-    .offset(imem_offset_ACT),
+    .line_data(icache_rdata_),
+    .offset(imem_offset_ACT_),
     .dataout(imem_rdata)
 );
 

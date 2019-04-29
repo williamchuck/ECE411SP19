@@ -49,6 +49,7 @@ logic [s_tag-1:0] tagmux_out, tagmux_out_, tagmux_out_WB;
 logic [s_line-1:0] hitmux_out, wbmux_out, inmux_out, hit_data, miss_data;
 logic [s_line-1:0] datas [num_ways];
 logic [s_line-1:0] line_dataout;
+logic [s_line-1:0] _upstream_rdata;
 
 logic [31:0] _address_1, _address_2, _address_3, _address_4, _address_WB;
 
@@ -117,6 +118,14 @@ assign index_WB = _address_WB[s_offset+s_index-1:s_offset];
 // assign downstream_address = downstream_address_sel ? {tagmux_out_, index_, {s_offset{1'b0}}} : _address_;
 assign downstream_address = downstream_address_sel ? {tagmux_out_WB, index_WB, {s_offset{1'b0}}} : _address_4;
 assign upstream_rdata = downstream_resp ? downstream_rdata : line_dataout;
+
+// register #(s_line) upstream_rdata_buffer
+// (
+//     .clk,
+//     .load(1'b1),
+//     .in(_upstream_rdata),
+//     .out(upstream_rdata)
+// );
 
 onehot_mux #(s_way, s_tag) tagmux
 (

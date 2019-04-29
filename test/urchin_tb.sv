@@ -58,21 +58,21 @@ physical_memory memory(
     .rdata(pmem_rdata)
 );
 
-shadow_memory sm
-(
-    .clk,
+// shadow_memory sm
+// (
+//     .clk,
 
-    .imem_valid(EX_ins_valid),
-    .imem_addr(EX_pc),
-    .imem_rdata(EX_ir),
-    .dmem_valid(dmem_ready && WB_load && !dmem_write),
-    .dmem_addr(dmem_write ? dmem_address : dmem_address_WB),
-    .dmem_rdata,
-    .write(dmem_write),
-    .wmask(dmem_byte_enable),
-    .wdata(dmem_wdata),
-    .error(sm_error),
-    .poison_inst(sm_poison)
-);
+//     .imem_valid(EX_ins_valid),
+//     .imem_addr(EX_pc),
+//     .imem_rdata(EX_ir),
+//     .dmem_valid(dmem_ready && WB_load && !dmem_write),
+//     .dmem_addr(dmem_write ? dmem_address : dmem_address_WB),
+//     .dmem_rdata,
+//     .write(dmem_write),
+//     .wmask(dmem_byte_enable),
+//     .wdata(dmem_wdata),
+//     .error(sm_error),
+//     .poison_inst(sm_poison)
+// );
 
 endmodule : urchin_tb

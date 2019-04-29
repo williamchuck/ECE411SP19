@@ -27,7 +27,7 @@ module cache_control (
 );
 
 enum int unsigned { 
-    IDLE, ACTION, WRITEBACK
+    IDLE, ACTION, WRITEBACK, MO
 } state, next_state;
 
 always_comb begin : state_based_action
@@ -65,6 +65,10 @@ always_comb begin : state_based_action
             end
         end
 
+        MO: begin
+            ;
+        end
+
         WRITEBACK: begin
             // upstream_resp = downstream_resp;
             downstream_address_sel = 1'b1;
@@ -81,7 +85,8 @@ always_comb begin : state_transition_logic
     next_state = state;
     case(state)
         IDLE: next_state = (upstream_read | upstream_write) ? ACTION : IDLE;
-        ACTION: next_state = hit ? IDLE : (downstream_resp ? (wb_required ? WRITEBACK : IDLE) : ACTION);
+        ACTION: next_state = hit ? MO : (downstream_resp ? (wb_required ? WRITEBACK : MO) : ACTION);
+        MO: next_state = IDLE;
         WRITEBACK: next_state = downstream_resp ? IDLE : WRITEBACK;
         default: ;
     endcase

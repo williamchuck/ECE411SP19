@@ -11,72 +11,8 @@ typedef enum bit [6:0] {
     op_imm   = 7'b0010011, //arith ops with register/immediate operands (I type)
     op_reg   = 7'b0110011, //arith ops with register operands (R type)
     op_csr   = 7'b1110011, //control and status register (I type)
-    op_nop   = 7'b1111111  //no-op
+    op_nop   = 7'b0000000  //no-op
 } rv32i_opcode;
-
-typedef enum bit [1:0] {
-    cop2_0 = 2'd0,
-    cop2_1 = 2'd1,
-    cop2_2 = 2'd2
-} c_op2;
-
-typedef enum bit [2:0] {
-    cop3_0 = 3'd0,
-    cop3_1 = 3'd1,
-    cop3_2 = 3'd2,
-    cop3_3 = 3'd3,
-    cop3_4 = 3'd4,
-    cop3_5 = 3'd5,
-    cop3_6 = 3'd6,
-    cop3_7 = 3'd7
-} c_funct3_t;
-
-typedef enum bit [1:0] { 
-    true_pc_0 = 2'd0,
-    true_pc_p2 = 2'd1,
-    true_pc_m2 = 2'd2
-} true_pc_sel_t;
-
-typedef enum bit [4:0] {
-    c_addi4spn = {cop2_0, cop3_0},
-    c_fld = {cop2_0, cop3_1}, //not supported
-    c_lw = {cop2_0, cop3_2},
-    c_flw = {cop2_0, cop3_3}, //not supported
-    c_reserved = {cop2_0, cop3_4}, //not supported
-    c_fsd = {cop2_0, cop3_5}, //not supported
-    c_sw = {cop2_0, cop3_6},
-    c_fsw = {cop2_0, cop3_7}, //not supported
-    c_addi = {cop2_1, cop3_0},
-    c_jal = {cop2_1, cop3_1},
-    c_li = {cop2_1, cop3_2},
-    c_lui_addi16sp = {cop2_1, cop3_3},
-    c_misc_alu = {cop2_1, cop3_4},
-    c_j = {cop2_1, cop3_5},
-    c_beqz = {cop2_1, cop3_6},
-    c_bnez = {cop2_1, cop3_7},
-    c_slli = {cop2_2, cop3_0},
-    c_fldsp = {cop2_2, cop3_1}, //not supported
-    c_lwsp = {cop2_2, cop3_2},
-    c_flwsp = {cop2_2, cop3_3}, //not supported
-    c_jalr_mv_add = {cop2_2, cop3_4},
-    c_fsdsp =  {cop2_2, cop3_5}, //not supported
-    c_swsp =  {cop2_2, cop3_6},
-    c_fswsp = {cop2_2, cop3_7} //not supported
-} rv32ic_opcode;
-
-typedef enum bit [1:0] { 
-    irh_one = 2'd0,
-    irh_rdata_low = 2'd1,
-    irh_rdata_high = 2'd2
-} ir_high_sel_t;
-
-typedef enum bit [2:0] { 
-    irl_one = 3'd0,
-    irl_rdata_low = 3'd1,
-    irl_low_full = 3'd2,
-    irl_half = 3'd3,
-    irl_rdata_high = 3'd4
-} ir_low_sel_t;
 
 typedef enum bit [1:0] {
     cmpmux_rs2 = 2'd0,
@@ -94,17 +30,7 @@ typedef enum bit [3:0] {
     imm_u = 4'd1,
     imm_b = 4'd2,
     imm_s = 4'd3,
-    imm_j = 4'd4,
-    cimm_u_addi4sp = 4'd5,
-    cimm_addi16sp = 4'd6,
-    cimm_u_lsw = 4'd7,
-    cimm_j = 4'd8,
-    cimm_i = 4'd9,
-    cimm_u = 4'd10,
-    cimm_lui = 4'd11,
-    cimm_b = 4'd12,
-    cimm_u_lwsp = 4'd13,
-    cimm_u_swsp = 4'd14
+    imm_j = 4'd4
 } ctwimm_sel_t;
 
 typedef enum bit [1:0] {
@@ -179,9 +105,7 @@ typedef enum bit [2:0] {
 } mul_ops;
 
 typedef struct packed {
-    logic is_c;
     rv32i_opcode opcode;
-    rv32ic_opcode c_opcode;
     alu_ops aluop;
     logic muldiv;
     branch_funct3_t cmpop;
@@ -196,7 +120,6 @@ typedef struct packed {
     logic [2:0] funct3;
     logic [6:0] funct7;
     logic [31:0] pc;
-    logic [31:0] ir;
     logic [31:0] imm;
     logic [4:0] rs1;
     logic [4:0] rs2;
