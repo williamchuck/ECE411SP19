@@ -42,7 +42,7 @@ assign ipipe = imem_resp & ~imem_stall;
 logic [s_offset-1:0] imem_offset, dmem_offset;
 assign imem_offset = {imem_address[s_offset-1:2], 2'd0};
 assign dmem_offset = {dmem_address[s_offset-1:2], 2'd0};
-logic [s_offset-1:0] imem_offset_ACT, dmem_offset_ACT, imem_offset_ACT_;
+logic [s_offset-1:0] imem_offset_ACT, dmem_offset_ACT, imem_offset_ACT_, dmem_offset_ACT_;
 
 logic [3:0] dmem_byte_enable_ACT;
 
@@ -50,14 +50,14 @@ logic dmem_write_ACT;
 
 logic l2_resp_;
 logic icache_read, dcache_read, dcache_write;
-logic icache_ready;
+logic icache_ready, dcache_ready;
 logic l2_icache_resp, l2_icache_read, l2_icache_write, l2_dcache_resp;
 logic l2_dcache_read, l2_dcache_write, l2_read, l2_write, l2_resp;
 logic [31:0] imem_rdata_transformer_out, dmem_rdata_transformer_out, dmem_wdata_ACT;
 logic [31:0] l2_icache_address, l2_dcache_address, l2_address;
 logic [255:0] l2_rdata_;
 logic [255:0] icache_rdata, icache_rdata_, l2_icache_rdata, l2_icache_wdata;
-logic [255:0] l2_dcache_wdata, dcache_wdata, dcache_rdata;
+logic [255:0] l2_dcache_wdata, dcache_wdata, dcache_rdata, dcache_rdata_;
 logic [255:0] dcache_downstream_rdata_transformed, l2_wdata, l2_rdata, l2_dcache_rdata;
 logic [255:0] pmem_rdata_reg_out;
 
@@ -102,7 +102,7 @@ cache_core_pipelined #(.s_offset(s_offset), .s_index(s_index), .s_way(2)) dcache
     .upstream_wdata(dcache_wdata),
     .upstream_rdata(dcache_rdata),
     .upstream_resp(dmem_resp),
-    .upstream_ready(dmem_ready),
+    .upstream_ready(dcache_ready),
 
     .downstream_resp(l2_dcache_resp),
     .downstream_rdata(dcache_downstream_rdata_transformed),
@@ -201,6 +201,14 @@ register #(256 + s_offset + 1) imem_buffer
     .out({icache_rdata_, imem_ready, imem_offset_ACT_})
 );
 
+register #(256 + s_offset + 1) dmem_buffer
+(
+    .clk,
+    .load(~dmem_stall),
+    .in({dcache_rdata, dcache_ready, dmem_offset_ACT}),
+    .out({dcache_rdata_, dmem_ready, dmem_offset_ACT_})
+);
+
 register #(256 + 1) l2_buffer
 (
     .clk,
@@ -238,8 +246,8 @@ output_transformer icache_output_transformer
 
 output_transformer dcache_output_transformer
 (
-    .line_data(dcache_rdata),
-    .offset(dmem_offset_ACT),
+    .line_data(dcache_rdata_),
+    .offset(dmem_offset_ACT_),
     .dataout(dmem_rdata)
 );
 
